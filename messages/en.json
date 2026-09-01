@@ -1,0 +1,16 @@
+{
+  "common": {
+    "title": "SOKU",
+    "welcome": "Welcome to SOKU",
+    "tagline": "Mobile-first marketplace for local commerce"
+  },
+  "roles": {
+    "vendeur": "Seller",
+    "acheteur": "Buyer",
+    "livreur": "Driver"
+  },
+  "algorithmes": {
+    "titre": "SOKU Algorithmic Analysis",
+    "avertissement": "Algorithmic analysis provides insights and recommendations. The user remains the sole decision-maker."
+  }
+}
