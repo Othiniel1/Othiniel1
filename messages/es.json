@@ -2,15 +2,54 @@
   "common": {
     "title": "SOKU",
     "welcome": "Bienvenido a SOKU",
-    "tagline": "Mercado mobile-first para el comercio local"
+    "tagline": "Marketplace móvil para el comercio local"
   },
   "roles": {
-    "vendeur": "Vendedor",
-    "acheteur": "Comprador",
-    "livreur": "Repartidor"
+    "vendeur": "SOKU Vendedor",
+    "acheteur": "SOKU Comprador",
+    "livreur": "SOKU Repartidor"
+  },
+  "status": {
+    "creee": "Creada",
+    "payee": "Pagada",
+    "en_attente": "En espera",
+    "en_preparation": "En preparación",
+    "prete": "Lista",
+    "remise_au_livreur": "Entregado al repartidor",
+    "en_livraison": "En camino",
+    "livree": "Entregada",
+    "annulee": "Cancelada"
+  },
+  "vehicules": {
+    "moto_ktm": "Moto KTM",
+    "scooter_125": "Scooter 125cc",
+    "velo_cargo": "Bicicleta Cargo",
+    "moto_suzuki": "Moto Suzuki 150",
+    "mini_camionnette": "Mini-Camioneta"
+  },
+  "point_soku": {
+    "evaluation_titre": "¿Fue fácil de encontrar el Punto SOKU?",
+    "facile": "Fácil",
+    "moyen": "Medio",
+    "difficile": "Difícil",
+    "motifs": {
+      "gps": "GPS impreciso",
+      "acces": "Acceso difícil / Obras",
+      "photo": "Foto de referencia insuficiente",
+      "client_absent": "Cliente ausente",
+      "mal_indique": "Punto mal indicado"
+    }
   },
   "algorithmes": {
     "titre": "Análisis Algorítmico SOKU",
-    "avertissement": "El análisis algorítmico proporciona diagnósticos y recomendaciones. El usuario sigue siendo el único tomador de decisiones."
+    "avertissement": "El análisis algorítmico proporciona diagnósticos y recomendaciones. El usuario es el único que decide.",
+    "blocs": {
+      "donnees": "1. DATOS",
+      "analyse": "2. ANÁLISIS",
+      "constat": "3. DIAGNÓSTICO",
+      "explication": "4. EXPLICACIÓN",
+      "recommandation": "5. RECOMENDACIÓN",
+      "decision": "Decisión del Usuario"
+    }
   }
 }

@@ -5,12 +5,51 @@
     "tagline": "Mobile-first marketplace for local commerce"
   },
   "roles": {
-    "vendeur": "Seller",
-    "acheteur": "Buyer",
-    "livreur": "Driver"
+    "vendeur": "SOKU Seller",
+    "acheteur": "SOKU Buyer",
+    "livreur": "SOKU Driver"
+  },
+  "status": {
+    "creee": "Created",
+    "payee": "Paid",
+    "en_attente": "Pending",
+    "en_preparation": "In preparation",
+    "prete": "Ready",
+    "remise_au_livreur": "Handed over to driver",
+    "en_livraison": "Out for delivery",
+    "livree": "Delivered",
+    "annulee": "Cancelled"
+  },
+  "vehicules": {
+    "moto_ktm": "KTM Motorcycle",
+    "scooter_125": "Scooter 125cc",
+    "velo_cargo": "Cargo Bike",
+    "moto_suzuki": "Suzuki 150 Motorcycle",
+    "mini_camionnette": "Mini-Van"
+  },
+  "point_soku": {
+    "evaluation_titre": "Was the SOKU Point easy to find?",
+    "facile": "Easy",
+    "moyen": "Medium",
+    "difficile": "Difficult",
+    "motifs": {
+      "gps": "Inaccurate GPS",
+      "acces": "Difficult access / Roadworks",
+      "photo": "Insufficient landmark photo",
+      "client_absent": "Absent client",
+      "mal_indique": "Poorly indicated point"
+    }
   },
   "algorithmes": {
     "titre": "SOKU Algorithmic Analysis",
-    "avertissement": "Algorithmic analysis provides insights and recommendations. The user remains the sole decision-maker."
+    "avertissement": "Algorithmic analysis provides insights and recommendations. The user remains the sole decision maker.",
+    "blocs": {
+      "donnees": "1. DATA",
+      "analyse": "2. ANALYSIS",
+      "constat": "3. FINDING",
+      "explication": "4. EXPLANATION",
+      "recommandation": "5. RECOMMENDATION",
+      "decision": "User Decision"
+    }
   }
 }

@@ -1,12 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  MOCK_PRODUITS,
-  MOCK_COMMANDES,
-  MockProduit,
-  MockCommande,
-} from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+import { sokuMockStore, CommandeGlobaleSOKU, SousCommandeVendeur } from '@/lib/mock-store';
+import { MockProduit } from '@/lib/mock-data';
 import { contratMoteurVendeur } from '@/lib/algorithmes/vendeur';
 import {
   Store,
@@ -17,47 +13,67 @@ import {
   TrendingUp,
   AlertCircle,
   Zap,
-  Info,
   Clock,
   ArrowRight,
+  Check,
+  CheckCheck,
 } from 'lucide-react';
 
 export default function VendeurPage() {
-  const [produits, setProduits] = useState<MockProduit[]>(MOCK_PRODUITS);
-  const [commandes, setCommandes] = useState<MockCommande[]>(MOCK_COMMANDES);
+  const [produits, setProduits] = useState<MockProduit[]>([]);
+  const [commandesGlobales, setCommandesGlobales] = useState<CommandeGlobaleSOKU[]>([]);
+
   const [nouveauNom, setNouveauNom] = useState('');
   const [nouveauPrix, setNouveauPrix] = useState('');
   const [nouvelleCategorie, setNouvelleCategorie] = useState('Alimentation');
   const [nouveauStock, setNouveauStock] = useState('10');
+
+  // Algorithmic Consultative State (5 Blocks)
   const [rapportAlgo, setRapportAlgo] = useState<{
+    donnees: Record<string, unknown>;
+    analyse: string;
     constat: string;
     explication: string;
     recommandation: string;
+    decisionUtilisateur: 'EN_ATTENTE' | 'ACCEPTEE' | 'REFUSEE';
   } | null>(null);
+
+  useEffect(() => {
+    setProduits(sokuMockStore.getProduits());
+    setCommandesGlobales(sokuMockStore.getCommandesGlobales());
+
+    const unsubscribe = sokuMockStore.subscribe(() => {
+      setProduits(sokuMockStore.getProduits());
+      setCommandesGlobales(sokuMockStore.getCommandesGlobales());
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const ajouterProduit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nouveauNom || !nouveauPrix) return;
 
-    const newProd: MockProduit = {
-      id: `prod_${Date.now()}`,
+    sokuMockStore.ajouterProduit({
       nom: nouveauNom,
-      boutiqueNom: 'Ma Boutique SOKU',
+      boutiqueNom: 'Délices de Cocody',
       prix: Number(nouveauPrix),
       categorie: nouvelleCategorie,
       description: 'Produit ajouté depuis le tableau de bord vendeur.',
       stock: Number(nouveauStock),
-    };
+    });
 
-    setProduits([newProd, ...produits]);
     setNouveauNom('');
     setNouveauPrix('');
   };
 
-  const changerStatutCommande = (id: string, nouveauStatut: MockCommande['statut']) => {
-    setCommandes((prev) =>
-      prev.map((cmd) => (cmd.id === id ? { ...cmd, statut: nouveauStatut } : cmd))
-    );
+  const changerStatutSousCommande = (
+    commandeId: string,
+    sousCommandeId: string,
+    nouveauStatut: SousCommandeVendeur['statut']
+  ) => {
+    sokuMockStore.mettreAJourStatutSousCommande(commandeId, sousCommandeId, nouveauStatut);
   };
 
   const declencherAnalyseAlgo = async () => {
@@ -66,13 +82,27 @@ export default function VendeurPage() {
       periodeJours: 30,
     });
     setRapportAlgo({
+      donnees: res.donneesAnalysées as unknown as Record<string, unknown>,
+      analyse: 'Analyse prédictive de la vitesse de rotation des stocks et des paniers moyens.',
       constat: res.constat,
       explication: res.explication,
       recommandation: res.recommandation,
+      decisionUtilisateur: 'EN_ATTENTE',
     });
   };
 
-  const chiffreAffairesMois = commandes.reduce((acc, c) => acc + c.montantTotal, 0);
+  const traiterDecisionAlgo = (decision: 'ACCEPTEE' | 'REFUSEE') => {
+    if (rapportAlgo) {
+      setRapportAlgo({ ...rapportAlgo, decisionUtilisateur: decision });
+    }
+  };
+
+  // Collect sub-orders relevant to this vendor
+  const sousCommandesMoi = commandesGlobales.flatMap((cmd) =>
+    cmd.sousCommandes.map((sub) => ({ cmdId: cmd.id, sub, date: cmd.dateCreation }))
+  );
+
+  const chiffreAffairesBrut = sousCommandesMoi.reduce((acc, { sub }) => acc + sub.montantSousTotal, 0);
 
   return (
     <div className="space-y-6 pb-12">
@@ -84,7 +114,7 @@ export default function VendeurPage() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Espace Gestion Boutique</h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">
-            Gérez votre catalogue, traitez vos commandes et suivez vos recommandations algorithmiques.
+            Gérez vos stocks, préparez vos sous-commandes et remettez vos colis aux livreurs SOKU.
           </p>
         </div>
 
@@ -97,104 +127,167 @@ export default function VendeurPage() {
         </button>
       </div>
 
-      {/* Consultative Banner */}
+      {/* Consultative Algorithmic Banner (5 Blocks) */}
       {rapportAlgo && (
-        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-3 shadow-sm">
-          <div className="flex items-center gap-2 text-amber-800 font-bold text-sm">
-            <Info className="w-5 h-5 text-amber-600 shrink-0" />
-            <span>Moteur Algorithmique Vendeur — Recommandation Consultative</span>
+        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-4 shadow-sm">
+          <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+            <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+              <Zap className="w-5 h-5 text-amber-600 shrink-0" />
+              <span>Analyse Consultative — Moteur Algorithmique Vendeur</span>
+            </div>
+            <span className="text-[11px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold uppercase">
+              Mode Avis Conseil
+            </span>
           </div>
-          <div className="text-xs sm:text-sm text-amber-900 space-y-1.5 pl-7">
-            <p><strong>Constat :</strong> {rapportAlgo.constat}</p>
-            <p><strong>Explication :</strong> {rapportAlgo.explication}</p>
-            <p className="text-amber-950 font-semibold">
-              <strong>Recommandation :</strong> {rapportAlgo.recommandation}
+
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
+            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
+              <p className="font-extrabold text-amber-900 mb-1">1. DONNÉES</p>
+              <p className="text-slate-700">{JSON.stringify(rapportAlgo.donnees)}</p>
+            </div>
+            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
+              <p className="font-extrabold text-amber-900 mb-1">2. ANALYSE</p>
+              <p className="text-slate-700">{rapportAlgo.analyse}</p>
+            </div>
+            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
+              <p className="font-extrabold text-amber-900 mb-1">3. CONSTAT</p>
+              <p className="text-slate-700">{rapportAlgo.constat}</p>
+            </div>
+            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
+              <p className="font-extrabold text-amber-900 mb-1">4. EXPLICATION</p>
+              <p className="text-slate-700">{rapportAlgo.explication}</p>
+            </div>
+            <div className="bg-amber-100/90 p-3 rounded-xl border border-amber-300">
+              <p className="font-extrabold text-amber-950 mb-1">5. RECOMMANDATION</p>
+              <p className="text-amber-950 font-medium">{rapportAlgo.recommandation}</p>
+            </div>
+          </div>
+
+          {/* Block 6: Human Decision Controls */}
+          <div className="pt-2 border-t border-amber-200 flex items-center justify-between">
+            <p className="text-[11px] text-amber-800 italic">
+              * L&apos;algorithme ne réapprovisionne aucun produit de façon autonome. Vous conservez le contrôle commercial.
             </p>
+            {rapportAlgo.decisionUtilisateur === 'EN_ATTENTE' ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => traiterDecisionAlgo('ACCEPTEE')}
+                  className="bg-slate-900 text-white font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-slate-800 flex items-center gap-1"
+                >
+                  <Check className="w-3.5 h-3.5 text-amber-400" /> Accepter Recommandation
+                </button>
+                <button
+                  onClick={() => traiterDecisionAlgo('REFUSEE')}
+                  className="bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-slate-300"
+                >
+                  Décliner
+                </button>
+              </div>
+            ) : (
+              <span className={`text-xs font-bold px-3 py-1 rounded-xl ${
+                rapportAlgo.decisionUtilisateur === 'ACCEPTEE' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'
+              }`}>
+                Décision enregistrée : {rapportAlgo.decisionUtilisateur}
+              </span>
+            )}
           </div>
-          <p className="text-[11px] text-amber-700 italic pl-7">
-            * L&apos;algorithme SOKU ne modifie ni vos prix ni vos stocks de manière autonome. Vous conservez la pleine maîtrise commerciale.
-          </p>
         </div>
       )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-          <p className="text-xs font-semibold text-slate-500">Chiffre d&apos;Affaires Estimé</p>
-          <p className="text-2xl font-black text-slate-900">{chiffreAffairesMois.toLocaleString()} FCFA</p>
+          <p className="text-xs font-semibold text-slate-500">Chiffre d&apos;Affaires Brut (Mock)</p>
+          <p className="text-2xl font-black text-slate-900">{chiffreAffairesBrut.toLocaleString()} FCFA</p>
           <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" /> +12% ce mois-ci
+            <TrendingUp className="w-3.5 h-3.5" /> +15% cette semaine
           </p>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-          <p className="text-xs font-semibold text-slate-500">Commandes à Traiter</p>
+          <p className="text-xs font-semibold text-slate-500">Sous-Commandes à Préparer</p>
           <p className="text-2xl font-black text-amber-600">
-            {commandes.filter((c) => c.statut !== 'LIVREE').length}
+            {sousCommandesMoi.filter(({ sub }) => sub.statut === 'EN_ATTENTE' || sub.statut === 'EN_PREPARATION').length}
           </p>
-          <p className="text-[11px] text-slate-500">Préparation & remise livreur</p>
+          <p className="text-[11px] text-slate-500">Flux Vendeur actif</p>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
           <p className="text-xs font-semibold text-slate-500">Articles en Catalogue</p>
           <p className="text-2xl font-black text-slate-900">{produits.length}</p>
-          <p className="text-[11px] text-slate-500">Stock total : {produits.reduce((acc, p) => acc + p.stock, 0)} unités</p>
+          <p className="text-[11px] text-slate-500">Total : {produits.reduce((acc, p) => acc + p.stock, 0)} unités</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Orders Processing */}
+        {/* Left: Orders Lifecycle Processing */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <ShoppingBag className="w-5 h-5 text-amber-500" />
-              Commandes Récents & Suivi
+              Sous-Commandes Vendeur ({sousCommandesMoi.length})
             </h2>
 
             <div className="space-y-3">
-              {commandes.map((cmd) => (
-                <div key={cmd.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+              {sousCommandesMoi.map(({ cmdId, sub }) => (
+                <div key={sub.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
                     <div>
-                      <span className="font-extrabold text-xs text-slate-900 mr-2">#{cmd.id}</span>
-                      <span className="text-xs font-medium text-slate-600">Client : {cmd.acheteurNom}</span>
+                      <span className="font-extrabold text-xs text-slate-900 mr-2">#{cmdId} ({sub.boutiqueNom})</span>
+                      <span className="text-xs font-medium text-slate-600">ID Sous-commande : {sub.id}</span>
                     </div>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
-                      {cmd.statut}
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 uppercase">
+                      {sub.statut.replace(/_/g, ' ')}
                     </span>
                   </div>
 
                   <div className="text-xs text-slate-700 space-y-1">
-                    <p>Articles : {cmd.articles.map((a) => `${a.quantite}x ${a.produitNom}`).join(', ')}</p>
-                    <p className="text-slate-500">Point SOKU cible : <strong>{cmd.pointSokuNom}</strong></p>
-                    <p className="font-bold text-slate-900">Total : {cmd.montantTotal.toLocaleString()} FCFA</p>
+                    <p className="font-bold">Articles sous-commande :</p>
+                    <ul className="list-disc list-inside space-y-0.5 text-slate-600 pl-1">
+                      {sub.articles.map((art, idx) => (
+                        <li key={idx}>
+                          {art.quantite}x {art.produit.nom} ({art.prixUnitaire} FCFA/u)
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="font-extrabold text-slate-900 pt-1">
+                      Sous-total : {sub.montantSousTotal.toLocaleString()} FCFA
+                    </p>
                   </div>
 
-                  {/* Actions according to workflow */}
+                  {/* Actions depending on exact Vendor order state */}
                   <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200">
-                    {cmd.statut === 'EN_ATTENTE' && (
+                    {sub.statut === 'EN_ATTENTE' && (
                       <button
-                        onClick={() => changerStatutCommande(cmd.id, 'EN_PREPARATION')}
+                        onClick={() => changerStatutSousCommande(cmdId, sub.id, 'EN_PREPARATION')}
                         className="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 shadow"
                       >
-                        <Clock className="w-3.5 h-3.5" /> Lancer la Préparation
+                        <Clock className="w-3.5 h-3.5" /> Accepter & Lancer Préparation
                       </button>
                     )}
-                    {cmd.statut === 'EN_PREPARATION' && (
+
+                    {sub.statut === 'EN_PREPARATION' && (
                       <button
-                        onClick={() => changerStatutCommande(cmd.id, 'PRETE')}
+                        onClick={() => changerStatutSousCommande(cmdId, sub.id, 'PRETE')}
                         className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 shadow"
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Marquer Prête / Prêt à Remettre au Livreur
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Marquer Prête (Prêt pour Collecte Livreur)
                       </button>
                     )}
-                    {cmd.statut === 'PRETE' && (
+
+                    {sub.statut === 'PRETE' && (
                       <button
-                        onClick={() => changerStatutCommande(cmd.id, 'EN_LIVRAISON')}
+                        onClick={() => changerStatutSousCommande(cmdId, sub.id, 'REMISE_AU_LIVREUR')}
                         className="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 shadow"
                       >
-                        <ArrowRight className="w-3.5 h-3.5 text-amber-400" /> Remis au Livreur SOKU
+                        <ArrowRight className="w-3.5 h-3.5 text-amber-400" /> Confirmer Remise au Livreur SOKU
                       </button>
+                    )}
+
+                    {sub.statut === 'REMISE_AU_LIVREUR' && (
+                      <span className="text-xs text-slate-500 font-bold flex items-center gap-1">
+                        <CheckCheck className="w-4 h-4 text-emerald-600" /> Colis transmis au Livreur
+                      </span>
                     )}
                   </div>
                 </div>
@@ -206,7 +299,7 @@ export default function VendeurPage() {
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Package className="w-5 h-5 text-amber-500" />
-              Vos Articles en Vente
+              Catalogue Produits
             </h2>
 
             <div className="divide-y divide-slate-100">
@@ -214,7 +307,7 @@ export default function VendeurPage() {
                 <div key={p.id} className="py-3 flex items-center justify-between text-xs">
                   <div>
                     <p className="font-bold text-slate-900">{p.nom}</p>
-                    <p className="text-slate-500">{p.categorie} — Stock : {p.stock} unités</p>
+                    <p className="text-slate-500">{p.boutiqueNom} • {p.categorie} — Stock : {p.stock} u</p>
                   </div>
                   <span className="font-extrabold text-slate-900 text-sm">{p.prix.toLocaleString()} FCFA</span>
                 </div>
@@ -228,7 +321,7 @@ export default function VendeurPage() {
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Plus className="w-5 h-5 text-amber-500" />
-              Ajouter un Produit
+              Nouveau Produit
             </h2>
 
             <form onSubmit={ajouterProduit} className="space-y-3 text-xs">
@@ -236,7 +329,7 @@ export default function VendeurPage() {
                 <label className="block font-bold text-slate-700 mb-1">Nom du produit</label>
                 <input
                   type="text"
-                  placeholder="Ex: Banane Aloko Fraîche (Sac)"
+                  placeholder="Ex: Piment Sento Frais (Sachet)"
                   value={nouveauNom}
                   onChange={(e) => setNouveauNom(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium focus:outline-none focus:ring-2 focus:ring-amber-400"
@@ -248,7 +341,7 @@ export default function VendeurPage() {
                 <label className="block font-bold text-slate-700 mb-1">Prix (FCFA)</label>
                 <input
                   type="number"
-                  placeholder="Ex: 3000"
+                  placeholder="Ex: 1500"
                   value={nouveauPrix}
                   onChange={(e) => setNouveauPrix(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium focus:outline-none focus:ring-2 focus:ring-amber-400"
@@ -271,7 +364,7 @@ export default function VendeurPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Quantité initiale en stock</label>
+                <label className="block font-bold text-slate-700 mb-1">Stock initial</label>
                 <input
                   type="number"
                   value={nouveauStock}
@@ -285,7 +378,7 @@ export default function VendeurPage() {
                 type="submit"
                 className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 shadow"
               >
-                <Plus className="w-4 h-4 text-amber-400" /> Publier dans la Boutique
+                <Plus className="w-4 h-4 text-amber-400" /> Publier le Produit
               </button>
             </form>
           </div>
@@ -296,7 +389,7 @@ export default function VendeurPage() {
               Conseil SOKU Vendeur
             </p>
             <p className="text-amber-800 leading-relaxed">
-              Maintenez vos stocks à jour pour éviter tout refus de commande. Les dépôts aux Points SOKU avant 11h augmentent vos ventes de 35%.
+              Marquez vos sous-commandes &quot;Prêtes&quot; le plus tôt possible pour permettre le regroupement des tournées livreurs.
             </p>
           </div>
         </div>

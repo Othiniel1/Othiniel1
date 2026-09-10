@@ -1,11 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import {
-  MOCK_PRODUITS,
-  MOCK_POINT_SOKU,
-  MockProduit,
-} from '@/lib/mock-data';
+import { useState, useEffect, useMemo } from 'react';
+import { sokuMockStore, CommandeGlobaleSOKU } from '@/lib/mock-store';
+import { MOCK_POINT_SOKU, MockProduit } from '@/lib/mock-data';
 import { contratMoteurAcheteur } from '@/lib/algorithmes/acheteur';
 import {
   ShoppingBag,
@@ -18,21 +15,43 @@ import {
   CheckCircle,
   Plus,
   Trash2,
-  Info,
+  Clock,
+  Eye,
+  X,
+  Check,
 } from 'lucide-react';
 
 export default function AcheteurPage() {
-  const [produits] = useState<MockProduit[]>(MOCK_PRODUITS);
+  const [produits, setProduits] = useState<MockProduit[]>([]);
+  const [commandes, setCommandes] = useState<CommandeGlobaleSOKU[]>([]);
   const [recherche, setRecherche] = useState('');
   const [categorieFiltre, setCategorieFiltre] = useState('TOUS');
   const [panier, setPanier] = useState<{ produit: MockProduit; quantite: number }[]>([]);
   const [modeLivraison, setModeLivraison] = useState<'livreur_soku' | 'vendeur_lui_meme' | 'retrait_sur_place'>('livreur_soku');
-  const [commandeValidee, setCommandeValidee] = useState<boolean>(false);
+  const [produitDetail, setProduitDetail] = useState<MockProduit | null>(null);
+
+  // Algorithmic Consultative State (5 Blocks)
   const [rapportAlgo, setRapportAlgo] = useState<{
+    donnees: Record<string, unknown>;
+    analyse: string;
     constat: string;
     explication: string;
     recommandation: string;
+    decisionUtilisateur: 'EN_ATTENTE' | 'ACCEPTEE' | 'REFUSEE';
   } | null>(null);
+
+  useEffect(() => {
+    setProduits(sokuMockStore.getProduits());
+    setCommandes(sokuMockStore.getCommandesGlobales());
+
+    const unsubscribe = sokuMockStore.subscribe(() => {
+      setProduits(sokuMockStore.getProduits());
+      setCommandes(sokuMockStore.getCommandesGlobales());
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const ajouterAuPanier = (prod: MockProduit) => {
     setPanier((prev) => {
@@ -52,27 +71,54 @@ export default function AcheteurPage() {
 
   const declencherAnalyseAlgo = async () => {
     const res = await contratMoteurAcheteur.analyser('acheteur_001', {
-      categoriesPreferees: ['Alimentation'],
+      categoriesPreferees: ['Alimentation', 'Épicerie'],
       localisationActuelle: { latitude: 5.3599, longitude: -4.0083 },
     });
     setRapportAlgo({
+      donnees: res.donneesAnalysées as unknown as Record<string, unknown>,
+      analyse: 'Traitement des habitudes d\'achat locales et de la proximité géographique des boutiques.',
       constat: res.constat,
       explication: res.explication,
       recommandation: res.recommandation,
+      decisionUtilisateur: 'EN_ATTENTE',
     });
   };
 
-  // Bolt Optimization: Memoize search filtering to prevent recalculation on every state change (e.g., cart updates, mode selection)
+  const traiterDecisionAlgo = (decision: 'ACCEPTEE' | 'REFUSEE') => {
+    if (rapportAlgo) {
+      setRapportAlgo({ ...rapportAlgo, decisionUtilisateur: decision });
+    }
+  };
+
+  const validerCommande = () => {
+    if (panier.length === 0) return;
+    const frais = modeLivraison === 'livreur_soku' ? 1000 : modeLivraison === 'vendeur_lui_meme' ? 800 : 0;
+    sokuMockStore.creerCommandeGlobale('Kouassi Jean', '+2250707010203', panier, modeLivraison, frais);
+    setPanier([]);
+  };
+
+  // Bolt Optimization: Memoized Search & Filtering
   const rechercheLower = recherche.toLowerCase();
   const produitsFiltres = useMemo(() => {
     return produits.filter((p) => {
-      const correspondRecherche =
+      const matchRecherche =
         p.nom.toLowerCase().includes(rechercheLower) ||
         p.boutiqueNom.toLowerCase().includes(rechercheLower);
-      const correspondCat = categorieFiltre === 'TOUS' || p.categorie === categorieFiltre;
-      return correspondRecherche && correspondCat;
+      const matchCat = categorieFiltre === 'TOUS' || p.categorie === categorieFiltre;
+      return matchRecherche && matchCat;
     });
   }, [produits, rechercheLower, categorieFiltre]);
+
+  // Group cart items by boutique/vendor for multi-vendor presentation
+  const panierParVendeur = useMemo(() => {
+    const map = new Map<string, { produit: MockProduit; quantite: number }[]>();
+    panier.forEach((item) => {
+      const bNom = item.produit.boutiqueNom;
+      if (!map.has(bNom)) map.set(bNom, []);
+      map.get(bNom)!.push(item);
+    });
+    return Array.from(map.entries());
+  }, [panier]);
 
   const sousTotal = panier.reduce((acc, item) => acc + item.produit.prix * item.quantite, 0);
   const fraisLivraison = modeLivraison === 'livreur_soku' ? 1000 : modeLivraison === 'vendeur_lui_meme' ? 800 : 0;
@@ -80,7 +126,7 @@ export default function AcheteurPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header Profile Banner */}
+      {/* Header Banner */}
       <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
@@ -88,11 +134,10 @@ export default function AcheteurPage() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Espace Découverte & Achats</h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">
-            Découvrez les produits des vendeurs locaux et choisissez votre mode de livraison adapté.
+            Découvrez les produits locaux, gérez vos sous-commandes multi-vendeurs et suivez vos livraisons.
           </p>
         </div>
 
-        {/* Algo Trigger Button */}
         <button
           onClick={declencherAnalyseAlgo}
           className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow"
@@ -102,33 +147,80 @@ export default function AcheteurPage() {
         </button>
       </div>
 
-      {/* Consultative Algorithmic Banner */}
+      {/* Consultative Algorithmic Banner (5 Structured Blocks) */}
       {rapportAlgo && (
-        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-3 shadow-sm">
-          <div className="flex items-center gap-2 text-amber-800 font-bold text-sm">
-            <Info className="w-5 h-5 text-amber-600 shrink-0" />
-            <span>Moteur Algorithmique Acheteur — Recommandation Consultative</span>
+        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-4 shadow-sm">
+          <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+            <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+              <Zap className="w-5 h-5 text-amber-600 shrink-0" />
+              <span>Analyse Consultative — Moteur Algorithmique Acheteur</span>
+            </div>
+            <span className="text-[11px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold uppercase">
+              Mode Avis Conseil
+            </span>
           </div>
-          <div className="text-xs sm:text-sm text-amber-900 space-y-1.5 pl-7">
-            <p><strong>Constat :</strong> {rapportAlgo.constat}</p>
-            <p><strong>Explication :</strong> {rapportAlgo.explication}</p>
-            <p className="text-amber-950 font-semibold">
-              <strong>Recommandation :</strong> {rapportAlgo.recommandation}
+
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
+            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
+              <p className="font-extrabold text-amber-900 mb-1">1. DONNÉES</p>
+              <p className="text-slate-700">{JSON.stringify(rapportAlgo.donnees)}</p>
+            </div>
+            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
+              <p className="font-extrabold text-amber-900 mb-1">2. ANALYSE</p>
+              <p className="text-slate-700">{rapportAlgo.analyse}</p>
+            </div>
+            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
+              <p className="font-extrabold text-amber-900 mb-1">3. CONSTAT</p>
+              <p className="text-slate-700">{rapportAlgo.constat}</p>
+            </div>
+            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
+              <p className="font-extrabold text-amber-900 mb-1">4. EXPLICATION</p>
+              <p className="text-slate-700">{rapportAlgo.explication}</p>
+            </div>
+            <div className="bg-amber-100/90 p-3 rounded-xl border border-amber-300">
+              <p className="font-extrabold text-amber-950 mb-1">5. RECOMMANDATION</p>
+              <p className="text-amber-950 font-medium">{rapportAlgo.recommandation}</p>
+            </div>
+          </div>
+
+          {/* Block 6: Human Decision Controls */}
+          <div className="pt-2 border-t border-amber-200 flex items-center justify-between">
+            <p className="text-[11px] text-amber-800 italic">
+              * L&apos;algorithme conseille mais n&apos;effectue aucun achat automatique. Vous conservez le pouvoir décisionnel.
             </p>
+            {rapportAlgo.decisionUtilisateur === 'EN_ATTENTE' ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => traiterDecisionAlgo('ACCEPTEE')}
+                  className="bg-slate-900 text-white font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-slate-800 flex items-center gap-1"
+                >
+                  <Check className="w-3.5 h-3.5 text-amber-400" /> Accepter Recommandation
+                </button>
+                <button
+                  onClick={() => traiterDecisionAlgo('REFUSEE')}
+                  className="bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-slate-300"
+                >
+                  Décliner
+                </button>
+              </div>
+            ) : (
+              <span className={`text-xs font-bold px-3 py-1 rounded-xl ${
+                rapportAlgo.decisionUtilisateur === 'ACCEPTEE' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'
+              }`}>
+                Décision enregistrée : {rapportAlgo.decisionUtilisateur}
+              </span>
+            )}
           </div>
-          <p className="text-[11px] text-amber-700 italic pl-7">
-            * SOKU suggère des opportunités selon vos habitudes. Vous gardez le contrôle total sur vos décisions d&apos;achat.
-          </p>
         </div>
       )}
 
-      {/* Search & Categories */}
+      {/* Search & Categories Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Rechercher un produit ou boutique..."
+            placeholder="Rechercher produit, aliment, boutique..."
             value={recherche}
             onChange={(e) => setRecherche(e.target.value)}
             className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-400"
@@ -136,7 +228,7 @@ export default function AcheteurPage() {
         </div>
 
         <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-          {['TOUS', 'Alimentation', 'Épicerie', 'Textile'].map((cat) => (
+          {['TOUS', 'Alimentation', 'Épicerie', 'Textile', 'Cosmétique'].map((cat) => (
             <button
               key={cat}
               onClick={() => setCategorieFiltre(cat)}
@@ -153,7 +245,7 @@ export default function AcheteurPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Product Catalog Grid */}
+        {/* Left: Product Grid */}
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {produitsFiltres.map((prod) => (
             <div key={prod.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between hover:border-amber-400 transition-all">
@@ -172,44 +264,65 @@ export default function AcheteurPage() {
                 <span className="text-base font-extrabold text-slate-900">
                   {prod.prix.toLocaleString()} FCFA
                 </span>
-                <button
-                  onClick={() => ajouterAuPanier(prod)}
-                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow"
-                >
-                  <Plus className="w-4 h-4" /> Ajouter
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setProduitDetail(prod)}
+                    className="p-1.5 bg-slate-200 text-slate-800 rounded-xl hover:bg-slate-300"
+                    title="Voir Fiche Produit"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => ajouterAuPanier(prod)}
+                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow"
+                  >
+                    <Plus className="w-4 h-4" /> Ajouter
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Cart & Checkout Panel */}
+        {/* Right: Cart & Multi-Vendor Sub-Orders Breakdown */}
         <div className="space-y-6">
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <ShoppingBag className="w-5 h-5 text-amber-500" />
-              Mon Panier ({panier.reduce((acc, i) => acc + i.quantite, 0)})
+              Mon Panier SOKU ({panier.reduce((acc, i) => acc + i.quantite, 0)})
             </h2>
 
             {panier.length === 0 ? (
               <p className="text-xs text-slate-500 py-4 text-center">Votre panier est vide.</p>
             ) : (
-              <div className="space-y-3">
-                <div className="divide-y divide-slate-100 text-xs">
-                  {panier.map((item) => (
-                    <div key={item.produit.id} className="py-2 flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-slate-800">{item.produit.nom}</p>
-                        <p className="text-slate-500">
-                          {item.quantite} x {item.produit.prix} FCFA
-                        </p>
+              <div className="space-y-4">
+                {/* Multi-Vendor Decomposition */}
+                <div className="space-y-3">
+                  <p className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">
+                    Décomposition Multi-Vendeurs (Paiement Unique) :
+                  </p>
+                  {panierParVendeur.map(([boutiqueNom, items]) => (
+                    <div key={boutiqueNom} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
+                      <div className="flex items-center justify-between font-bold text-slate-900 border-b border-slate-200 pb-1">
+                        <span className="flex items-center gap-1">
+                          <Store className="w-3.5 h-3.5 text-amber-600" />
+                          {boutiqueNom}
+                        </span>
+                        <span className="text-slate-600">Sous-Commande Vendeur</span>
                       </div>
-                      <button
-                        onClick={() => retirerDuPanier(item.produit.id)}
-                        className="text-slate-400 hover:text-rose-600 p-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="space-y-1">
+                        {items.map((item) => (
+                          <div key={item.produit.id} className="flex justify-between items-center">
+                            <span>{item.quantite}x {item.produit.nom}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{(item.produit.prix * item.quantite).toLocaleString()} FCFA</span>
+                              <button onClick={() => retirerDuPanier(item.produit.id)} className="text-slate-400 hover:text-rose-600">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -217,13 +330,13 @@ export default function AcheteurPage() {
                 {/* Delivery Mode Choice */}
                 <div className="pt-3 border-t border-slate-200 space-y-2">
                   <label className="block text-xs font-bold text-slate-800">
-                    Choisissez votre mode de livraison :
+                    Mode de livraison global :
                   </label>
                   <div className="space-y-1.5 text-xs">
                     {[
                       { id: 'livreur_soku', label: 'Livreur SOKU (Point SOKU inclus)', icon: Truck },
-                      { id: 'vendeur_lui_meme', label: 'Livraison directe par le Vendeur', icon: Store },
-                      { id: 'retrait_sur_place', label: 'Retrait gratuit sur place', icon: MapPin },
+                      { id: 'vendeur_lui_meme', label: 'Livraison directe Vendeur', icon: Store },
+                      { id: 'retrait_sur_place', label: 'Retrait sur place', icon: MapPin },
                     ].map((mode) => (
                       <button
                         key={mode.id}
@@ -253,7 +366,7 @@ export default function AcheteurPage() {
                   </div>
                 )}
 
-                {/* Total & Validation */}
+                {/* Checkout Totals & Submit */}
                 <div className="pt-3 border-t border-slate-200 space-y-2">
                   <div className="flex justify-between text-xs text-slate-600">
                     <span>Sous-total articles</span>
@@ -264,46 +377,113 @@ export default function AcheteurPage() {
                     <span>{fraisLivraison.toLocaleString()} FCFA</span>
                   </div>
                   <div className="flex justify-between text-sm font-extrabold text-slate-900 pt-1 border-t border-slate-100">
-                    <span>Total Général</span>
+                    <span>Total Général (Paiement Unique)</span>
                     <span className="text-amber-600">{totalGeneral.toLocaleString()} FCFA</span>
                   </div>
 
                   <button
-                    onClick={() => setCommandeValidee(true)}
+                    onClick={validerCommande}
                     className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow mt-2"
                   >
                     <CheckCircle className="w-4 h-4 text-amber-400" />
-                    Valider ma Commande SOKU
+                    Valider ma Commande Globale
                   </button>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Active Order Tracking */}
-          {commandeValidee && (
-            <div className="bg-emerald-50 border border-emerald-300 p-5 rounded-2xl space-y-3 shadow-sm">
-              <div className="flex items-center justify-between text-emerald-900 font-bold text-sm">
-                <span>Commande #cmd_8080 En Cours</span>
-                <span className="bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded text-xs font-bold">
-                  En livraison
-                </span>
-              </div>
-              <p className="text-xs text-emerald-800">
-                Votre livreur SOKU <strong>Ibrahim Koné (KTM)</strong> est en route vers le Point SOKU.
-              </p>
-              <div className="flex gap-2 pt-1">
-                <a
-                  href="tel:+2250777665544"
-                  className="inline-flex items-center gap-1.5 bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-800"
-                >
-                  <Phone className="w-3.5 h-3.5" /> Appeler le Livreur
-                </a>
-              </div>
+          {/* Orders Tracking Timeline Section */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-amber-500" />
+              Suivi Real-time des Commandes ({commandes.length})
+            </h2>
+
+            <div className="space-y-4">
+              {commandes.map((cmd) => (
+                <div key={cmd.id} className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3 text-xs">
+                  <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                    <span className="font-extrabold text-slate-900">#{cmd.id}</span>
+                    <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold">
+                      {cmd.statutGlobal.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+
+                  {/* Sub-orders Status List */}
+                  <div className="space-y-1">
+                    <p className="font-bold text-slate-700">Sous-Commandes Vendeurs :</p>
+                    {cmd.sousCommandes.map((sub) => (
+                      <div key={sub.id} className="flex justify-between text-[11px] bg-white p-2 rounded border border-slate-200">
+                        <span>{sub.boutiqueNom}</span>
+                        <span className="font-bold text-amber-800">{sub.statut.replace(/_/g, ' ')}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Driver Contact Card if assigned */}
+                  {cmd.livreurNom && (
+                    <div className="bg-emerald-50 border border-emerald-200 p-2.5 rounded-lg flex items-center justify-between text-emerald-950">
+                      <div>
+                        <p className="font-bold">{cmd.livreurNom}</p>
+                        <p className="text-[11px] text-emerald-800">{cmd.livreurVehicule}</p>
+                      </div>
+                      <a
+                        href={`tel:${cmd.livreurTelephone}`}
+                        className="bg-emerald-700 text-white p-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1"
+                      >
+                        <Phone className="w-3.5 h-3.5" /> Appeler
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-          )}
+          </div>
         </div>
       </div>
+
+      {/* Product Detail Modal */}
+      {produitDetail && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-xl border border-slate-200">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-xs">
+                  {produitDetail.categorie}
+                </span>
+                <h3 className="font-extrabold text-slate-900 text-lg mt-1">{produitDetail.nom}</h3>
+                <p className="text-xs text-slate-500 font-medium">{produitDetail.boutiqueNom}</p>
+              </div>
+              <button onClick={() => setProduitDetail(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-700 leading-relaxed">{produitDetail.description}</p>
+
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1 text-xs">
+              <p><strong>Stock disponible :</strong> {produitDetail.stock} unités</p>
+              <p><strong>Mode de livraison :</strong> Livreur SOKU ou Retrait sur place</p>
+            </div>
+
+            <div className="flex justify-between items-center pt-2">
+              <span className="text-xl font-black text-slate-900">
+                {produitDetail.prix.toLocaleString()} FCFA
+              </span>
+              <button
+                onClick={() => {
+                  ajouterAuPanier(produitDetail);
+                  setProduitDetail(null);
+                }}
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1 shadow"
+              >
+                <Plus className="w-4 h-4" /> Ajouter au panier
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,12 +5,51 @@
     "tagline": "Marketplace mobile-first pour le commerce local"
   },
   "roles": {
-    "vendeur": "Vendeur",
-    "acheteur": "Acheteur",
-    "livreur": "Livreur"
+    "vendeur": "SOKU Vendeur",
+    "acheteur": "SOKU Acheteur",
+    "livreur": "SOKU Livreur"
+  },
+  "status": {
+    "creee": "Créée",
+    "payee": "Payée",
+    "en_attente": "En attente",
+    "en_preparation": "En préparation",
+    "prete": "Prête",
+    "remise_au_livreur": "Remise au livreur",
+    "en_livraison": "En livraison",
+    "livree": "Livrée",
+    "annulee": "Annulée"
+  },
+  "vehicules": {
+    "moto_ktm": "Moto KTM",
+    "scooter_125": "Scooter 125cc",
+    "velo_cargo": "Vélo Cargo",
+    "moto_suzuki": "Moto Suzuki 150",
+    "mini_camionnette": "Mini-Camionnette"
+  },
+  "point_soku": {
+    "evaluation_titre": "Le point SOKU était-il facile à trouver ?",
+    "facile": "Facile",
+    "moyen": "Moyen",
+    "difficile": "Difficile",
+    "motifs": {
+      "gps": "GPS imprécis",
+      "acces": "Accès difficile / Travaux",
+      "photo": "Photo repère insuffisante",
+      "client_absent": "Client absent",
+      "mal_indique": "Point mal indiqué"
+    }
   },
   "algorithmes": {
     "titre": "Analyse algorithmique SOKU",
-    "avertissement": "L'analyse algorithmique fournit un constat et une recommandation. L'utilisateur reste le seul décideur."
+    "avertissement": "L'analyse algorithmique fournit un constat et une recommandation. L'utilisateur reste le seul décideur.",
+    "blocs": {
+      "donnees": "1. DONNÉES",
+      "analyse": "2. ANALYSE",
+      "constat": "3. CONSTAT",
+      "explication": "4. EXPLICATION",
+      "recommandation": "5. RECOMMANDATION",
+      "decision": "Décision de l'utilisateur"
+    }
   }
 }

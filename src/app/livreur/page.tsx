@@ -1,12 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  MOCK_MISSIONS_LIVREUR,
-  MOCK_POINT_SOKU,
-  MockMissionLivreur,
-} from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+import { sokuMockStore } from '@/lib/mock-store';
+import { MOCK_POINT_SOKU, MockMissionLivreur } from '@/lib/mock-data';
 import { contratMoteurLivreur } from '@/lib/algorithmes/livreur';
+import { busEvenements } from '@/lib/evenements/bus';
 import {
   Truck,
   MapPin,
@@ -16,10 +14,11 @@ import {
   Zap,
   Clock,
   ShieldCheck,
-  Info,
   Layers,
   ChevronRight,
   TrendingUp,
+  X,
+  Check,
 } from 'lucide-react';
 
 type StatutFonctionnel =
@@ -34,24 +33,38 @@ type TypeVehicule = 'moto_ktm' | 'scooter_125' | 'velo_cargo' | 'moto_suzuki' | 
 export default function LivreurPage() {
   const [statutActuel, setStatutActuel] = useState<StatutFonctionnel>('DISPONIBLE');
   const [vehicule, setVehicule] = useState<TypeVehicule>('moto_ktm');
-  const [missions, setMissions] = useState<MockMissionLivreur[]>(MOCK_MISSIONS_LIVREUR);
+  const [missions, setMissions] = useState<MockMissionLivreur[]>([]);
   const [dialogueAppel, setDialogueAppel] = useState<{ client: string; tel: string } | null>(null);
-  const [feedbackPointSoku, setFeedbackPointSoku] = useState<string | null>(null);
+
+  // Point SOKU Feedback Modal
+  const [modalFeedbackOuverte, setModalFeedbackOuverte] = useState(false);
+  const [niveauFacilite, setNiveauFacilite] = useState<'FACILE' | 'MOYEN' | 'DIFFICILE'>('FACILE');
+  const [motifDifficulte, setMotifDifficulte] = useState<string>('GPS imprécis');
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+
+  // Algorithmic Consultative State (5 Blocks)
   const [rapportAlgo, setRapportAlgo] = useState<{
+    donnees: Record<string, unknown>;
+    analyse: string;
     constat: string;
     explication: string;
     recommandation: string;
+    decisionUtilisateur: 'EN_ATTENTE' | 'ACCEPTEE' | 'REFUSEE';
   } | null>(null);
 
+  useEffect(() => {
+    setMissions(sokuMockStore.getMissionsLivreur());
+
+    const unsubscribe = sokuMockStore.subscribe(() => {
+      setMissions(sokuMockStore.getMissionsLivreur());
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   const changerStatutMission = (id: string, nouveauStatut: MockMissionLivreur['statut']) => {
-    setMissions((prev) =>
-      prev.map((m) => {
-        if (m.id === id) {
-          return { ...m, statut: nouveauStatut };
-        }
-        return m;
-      })
-    );
+    sokuMockStore.mettreAJourStatutMissionLivreur(id, nouveauStatut);
   };
 
   const declencherAnalyseAlgo = async () => {
@@ -60,10 +73,30 @@ export default function LivreurPage() {
       estDisponible: true,
     });
     setRapportAlgo({
+      donnees: res.donneesAnalysées as unknown as Record<string, unknown>,
+      analyse: 'Calcul de la densité de commandes et de la vitesse moyenne de déplacement en zone dense.',
       constat: res.constat,
       explication: res.explication,
       recommandation: res.recommandation,
+      decisionUtilisateur: 'EN_ATTENTE',
     });
+  };
+
+  const traiterDecisionAlgo = (decision: 'ACCEPTEE' | 'REFUSEE') => {
+    if (rapportAlgo) {
+      setRapportAlgo({ ...rapportAlgo, decisionUtilisateur: decision });
+    }
+  };
+
+  const soumettreFeedbackPointSoku = () => {
+    busEvenements.publier('livraison:validee', 'livreur-app', {
+      pointSokuId: MOCK_POINT_SOKU.id,
+      facilite: niveauFacilite,
+      motif: niveauFacilite !== 'FACILE' ? motifDifficulte : 'Aucun',
+    });
+
+    setFeedbackMessage(`Signalement "${niveauFacilite}" transmis à l'Orchestrateur.`);
+    setModalFeedbackOuverte(false);
   };
 
   const activeMissions = missions.filter((m) => m.statut === 'EN_COURS');
@@ -72,7 +105,7 @@ export default function LivreurPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header Profile Banner */}
+      {/* Header Banner */}
       <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
@@ -80,43 +113,89 @@ export default function LivreurPage() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Espace Livreur Partenaire</h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">
-            Gérez vos tournées, votre véhicule et répondez aux propositions de mission.
+            Gérez vos tournées mutualisées, répondez aux missions dédiées et signalez la qualité des Points SOKU.
           </p>
         </div>
 
-        {/* Algo Trigger Button */}
         <button
           onClick={declencherAnalyseAlgo}
           className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow"
         >
           <Zap className="w-4 h-4 fill-slate-950" />
-          Analyse Algorithmique SOKU
+          Analyse Algorithmique Livreur
         </button>
       </div>
 
-      {/* Consultative Algorithmic Banner */}
+      {/* Consultative Algorithmic Banner (5 Blocks) */}
       {rapportAlgo && (
-        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-3 shadow-sm">
-          <div className="flex items-center gap-2 text-amber-800 font-bold text-sm">
-            <Info className="w-5 h-5 text-amber-600 shrink-0" />
-            <span>Moteur Algorithmique Livreur — Recommandation Consultative</span>
+        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-4 shadow-sm">
+          <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+            <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+              <Zap className="w-5 h-5 text-amber-600 shrink-0" />
+              <span>Analyse Consultative — Moteur Algorithmique Livreur</span>
+            </div>
+            <span className="text-[11px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold uppercase">
+              Mode Avis Conseil
+            </span>
           </div>
-          <div className="text-xs sm:text-sm text-amber-900 space-y-1.5 pl-7">
-            <p><strong>Constat :</strong> {rapportAlgo.constat}</p>
-            <p><strong>Explication :</strong> {rapportAlgo.explication}</p>
-            <p className="text-amber-950 font-semibold">
-              <strong>Recommandation :</strong> {rapportAlgo.recommandation}
+
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
+            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
+              <p className="font-extrabold text-amber-900 mb-1">1. DONNÉES</p>
+              <p className="text-slate-700">{JSON.stringify(rapportAlgo.donnees)}</p>
+            </div>
+            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
+              <p className="font-extrabold text-amber-900 mb-1">2. ANALYSE</p>
+              <p className="text-slate-700">{rapportAlgo.analyse}</p>
+            </div>
+            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
+              <p className="font-extrabold text-amber-900 mb-1">3. CONSTAT</p>
+              <p className="text-slate-700">{rapportAlgo.constat}</p>
+            </div>
+            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
+              <p className="font-extrabold text-amber-900 mb-1">4. EXPLICATION</p>
+              <p className="text-slate-700">{rapportAlgo.explication}</p>
+            </div>
+            <div className="bg-amber-100/90 p-3 rounded-xl border border-amber-300">
+              <p className="font-extrabold text-amber-950 mb-1">5. RECOMMANDATION</p>
+              <p className="text-amber-950 font-medium">{rapportAlgo.recommandation}</p>
+            </div>
+          </div>
+
+          {/* Block 6: Human Decision Controls */}
+          <div className="pt-2 border-t border-amber-200 flex items-center justify-between">
+            <p className="text-[11px] text-amber-800 italic">
+              * L&apos;algorithme SOKU suggère mais n&apos;impose aucune mission forcée. Le livreur décide librement.
             </p>
+            {rapportAlgo.decisionUtilisateur === 'EN_ATTENTE' ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => traiterDecisionAlgo('ACCEPTEE')}
+                  className="bg-slate-900 text-white font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-slate-800 flex items-center gap-1"
+                >
+                  <Check className="w-3.5 h-3.5 text-amber-400" /> Accepter Recommandation
+                </button>
+                <button
+                  onClick={() => traiterDecisionAlgo('REFUSEE')}
+                  className="bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-slate-300"
+                >
+                  Décliner
+                </button>
+              </div>
+            ) : (
+              <span className={`text-xs font-bold px-3 py-1 rounded-xl ${
+                rapportAlgo.decisionUtilisateur === 'ACCEPTEE' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'
+              }`}>
+                Décision enregistrée : {rapportAlgo.decisionUtilisateur}
+              </span>
+            )}
           </div>
-          <p className="text-[11px] text-amber-700 italic pl-7">
-            * Ce moteur fournit des conseils de maximisation de revenus sans imposer d&apos;attribution forcée. Vous décidez d&apos;accepter ou refuser chaque mission.
-          </p>
         </div>
       )}
 
-      {/* Status & Capacity Panel */}
+      {/* Status & Capacity Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Functional Status */}
+        {/* Status */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
           <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-500" />
@@ -148,11 +227,11 @@ export default function LivreurPage() {
           </div>
         </div>
 
-        {/* Vehicle Selection & Capacity */}
+        {/* Vehicle Selection & Multi-Factor Capacity */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
           <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Truck className="w-4 h-4 text-amber-500" />
-            Véhicule & Capacité
+            Véhicule & Capacité Tridimensionnelle
           </h2>
           <div className="space-y-2 text-xs">
             <label className="block text-slate-600 font-semibold">Type de véhicule actif :</label>
@@ -169,9 +248,10 @@ export default function LivreurPage() {
             </select>
 
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-slate-700 text-[11px] space-y-1">
-              <p className="font-bold text-slate-900">Indicateurs de Capacité :</p>
-              <p>• Charge utile (Poids) : {vehicule === 'mini_camionnette' ? '500 kg max' : '30 kg max'}</p>
-              <p>• Volume disponible : {vehicule === 'mini_camionnette' ? '2.5 m³ libre' : '0.05 m³ libre'}</p>
+              <p className="font-bold text-slate-900">Jauges de Capacité (Poids, Volume, Colis) :</p>
+              <p>• Charge utile utile : {vehicule === 'mini_camionnette' ? '500 kg max (Utilisé: 80 kg)' : '30 kg max (Utilisé: 12 kg)'}</p>
+              <p>• Volume utile : {vehicule === 'mini_camionnette' ? '2.5 m³ libre (Utilisé: 0.4 m³)' : '0.05 m³ libre (Utilisé: 0.02 m³)'}</p>
+              <p>• Contrainte colis max : {vehicule === 'mini_camionnette' ? '20 colis' : '4 colis'}</p>
             </div>
           </div>
         </div>
@@ -185,7 +265,7 @@ export default function LivreurPage() {
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs pt-2">
           <div className="bg-slate-50 p-3 rounded-xl">
-            <span className="text-slate-500 block">Revenus du Jour</span>
+            <span className="text-slate-500 block">Revenus du Jour (Mock)</span>
             <span className="text-lg font-black text-slate-900">14 500 FCFA</span>
           </div>
           <div className="bg-slate-50 p-3 rounded-xl">
@@ -231,13 +311,20 @@ export default function LivreurPage() {
                   <p><strong>Distance :</strong> {miss.distanceKm} km</p>
                 </div>
 
-                {/* Point SOKU Feedback & Actions */}
+                {/* Point SOKU Feedback Trigger & Actions */}
                 <div className="pt-3 border-t border-amber-200 flex flex-wrap gap-2 text-xs">
                   <button
                     onClick={() => setDialogueAppel({ client: 'Client #' + miss.commandeId, tel: miss.clientTelephone })}
                     className="bg-slate-900 text-white font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 hover:bg-slate-800 shadow"
                   >
                     <Phone className="w-3.5 h-3.5 text-amber-400" /> Appeler le Destinataire
+                  </button>
+
+                  <button
+                    onClick={() => setModalFeedbackOuverte(true)}
+                    className="bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 hover:bg-amber-400 shadow"
+                  >
+                    <MapPin className="w-3.5 h-3.5" /> Signaler Évaluation Point SOKU
                   </button>
 
                   <button
@@ -252,6 +339,74 @@ export default function LivreurPage() {
           </div>
         )}
       </div>
+
+      {/* Point SOKU Feedback Feedback Message Banner */}
+      {feedbackMessage && (
+        <div className="bg-emerald-50 border border-emerald-300 p-4 rounded-2xl text-xs text-emerald-900 font-bold flex justify-between items-center">
+          <span>{feedbackMessage}</span>
+          <button onClick={() => setFeedbackMessage(null)} className="text-emerald-700">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Point SOKU Feedback Modal */}
+      {modalFeedbackOuverte && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-xl border border-slate-200">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+              <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-amber-500" /> Le point SOKU était-il facile à trouver ?
+              </h3>
+              <button onClick={() => setModalFeedbackOuverte(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex justify-center gap-2 text-xs font-bold">
+              {(['FACILE', 'MOYEN', 'DIFFICILE'] as const).map((niv) => (
+                <button
+                  key={niv}
+                  onClick={() => setNiveauFacilite(niv)}
+                  className={`px-4 py-2 rounded-xl border transition-all ${
+                    niveauFacilite === niv
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-slate-50 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  {niv}
+                </button>
+              ))}
+            </div>
+
+            {niveauFacilite !== 'FACILE' && (
+              <div className="space-y-2 text-xs">
+                <label className="block font-bold text-slate-700">Motif du problème rencontré :</label>
+                <select
+                  value={motifDifficulte}
+                  onChange={(e) => setMotifDifficulte(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium"
+                >
+                  <option value="GPS imprécis">GPS imprécis</option>
+                  <option value="Accès difficile">Accès difficile / Travaux</option>
+                  <option value="Photo insuffisante">Photo repère insuffisante</option>
+                  <option value="Client absent">Client absent</option>
+                  <option value="Point mal indiqué">Point mal indiqué</option>
+                </select>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={soumettreFeedbackPointSoku}
+                className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-800"
+              >
+                Transmettre Signalement
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Call Dialog Modal */}
       {dialogueAppel && (
@@ -278,33 +433,6 @@ export default function LivreurPage() {
           </div>
         </div>
       )}
-
-      {/* Point SOKU Quality Feedback Module */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-        <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-amber-500" />
-          Point SOKU - Signaler l&apos;état d&apos;un Relais ({MOCK_POINT_SOKU.nom})
-        </h2>
-        <p className="text-xs text-slate-600">
-          Aidez le réseau SOKU à maintenir des points relais fluides en signalant d&apos;éventuels encombrements.
-        </p>
-        <div className="flex flex-wrap gap-2 text-xs">
-          {['Relais Fluide & Accessible', 'Encombré / Attente > 5min', 'Fermé Temporairement'].map((rep) => (
-            <button
-              key={rep}
-              onClick={() => setFeedbackPointSoku(rep)}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl font-medium border border-slate-200"
-            >
-              {rep}
-            </button>
-          ))}
-        </div>
-        {feedbackPointSoku && (
-          <p className="text-xs font-bold text-emerald-700 bg-emerald-50 p-2 rounded-xl border border-emerald-200">
-            ✓ Signalement enregistré : &quot;{feedbackPointSoku}&quot; transmis à l&apos;Orchestrateur.
-          </p>
-        )}
-      </div>
 
       {/* Proposed Missions Lists (Mutualised & Dedicated) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
