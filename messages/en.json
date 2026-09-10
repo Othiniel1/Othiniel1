@@ -20,6 +20,18 @@
     "livree": "Delivered",
     "annulee": "Cancelled"
   },
+  "badges": {
+    "nouveau": "New",
+    "populaire": "Popular",
+    "promo": "Sale",
+    "stock_faible": "Low Stock"
+  },
+  "product": {
+    "ajouter_au_panier": "Add to cart",
+    "vendus": "sold",
+    "variante": "Choose a variant",
+    "sequestre_notice": "SOKU Protection & Non-Custodial Escrow"
+  },
   "vehicules": {
     "moto_ktm": "KTM Motorcycle",
     "scooter_125": "Scooter 125cc",

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { sokuMockStore, CommandeGlobaleSOKU } from '@/lib/mock-store';
 import { MOCK_POINT_SOKU, MockProduit } from '@/lib/mock-data';
 import { contratMoteurAcheteur } from '@/lib/algorithmes/acheteur';
@@ -16,9 +17,11 @@ import {
   Plus,
   Trash2,
   Clock,
-  Eye,
   X,
   Check,
+  Star,
+  ShoppingBasket,
+  ShieldCheck,
 } from 'lucide-react';
 
 export default function AcheteurPage() {
@@ -26,9 +29,10 @@ export default function AcheteurPage() {
   const [commandes, setCommandes] = useState<CommandeGlobaleSOKU[]>([]);
   const [recherche, setRecherche] = useState('');
   const [categorieFiltre, setCategorieFiltre] = useState('TOUS');
-  const [panier, setPanier] = useState<{ produit: MockProduit; quantite: number }[]>([]);
+  const [panier, setPanier] = useState<{ produit: MockProduit; quantite: number; variationSelectionnee?: string }[]>([]);
   const [modeLivraison, setModeLivraison] = useState<'livreur_soku' | 'vendeur_lui_meme' | 'retrait_sur_place'>('livreur_soku');
   const [produitDetail, setProduitDetail] = useState<MockProduit | null>(null);
+  const [variationChoisie, setVariationChoisie] = useState<string>('');
 
   // Algorithmic Consultative State (5 Blocks)
   const [rapportAlgo, setRapportAlgo] = useState<{
@@ -53,15 +57,17 @@ export default function AcheteurPage() {
     };
   }, []);
 
-  const ajouterAuPanier = (prod: MockProduit) => {
+  const ajouterAuPanier = (prod: MockProduit, variation?: string) => {
     setPanier((prev) => {
-      const exist = prev.find((item) => item.produit.id === prod.id);
+      const exist = prev.find((item) => item.produit.id === prod.id && item.variationSelectionnee === variation);
       if (exist) {
         return prev.map((item) =>
-          item.produit.id === prod.id ? { ...item, quantite: item.quantite + 1 } : item
+          item.produit.id === prod.id && item.variationSelectionnee === variation
+            ? { ...item, quantite: item.quantite + 1 }
+            : item
         );
       }
-      return [...prev, { produit: prod, quantite: 1 }];
+      return [...prev, { produit: prod, quantite: 1, variationSelectionnee: variation || prod.variations?.[0] }];
     });
   };
 
@@ -111,7 +117,7 @@ export default function AcheteurPage() {
 
   // Group cart items by boutique/vendor for multi-vendor presentation
   const panierParVendeur = useMemo(() => {
-    const map = new Map<string, { produit: MockProduit; quantite: number }[]>();
+    const map = new Map<string, { produit: MockProduit; quantite: number; variationSelectionnee?: string }[]>();
     panier.forEach((item) => {
       const bNom = item.produit.boutiqueNom;
       if (!map.has(bNom)) map.set(bNom, []);
@@ -134,7 +140,7 @@ export default function AcheteurPage() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Espace Découverte & Achats</h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">
-            Découvrez les produits locaux, gérez vos sous-commandes multi-vendeurs et suivez vos livraisons.
+            Parcourez le catalogue e-commerce local, visualisez les fiches détaillées et gérez vos livraisons SOKU.
           </p>
         </div>
 
@@ -183,7 +189,6 @@ export default function AcheteurPage() {
             </div>
           </div>
 
-          {/* Block 6: Human Decision Controls */}
           <div className="pt-2 border-t border-amber-200 flex items-center justify-between">
             <p className="text-[11px] text-amber-800 italic">
               * L&apos;algorithme conseille mais n&apos;effectue aucun achat automatique. Vous conservez le pouvoir décisionnel.
@@ -245,39 +250,92 @@ export default function AcheteurPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Product Grid */}
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Left: Product Cards Grid (E-commerce Marketplace Style) */}
+        <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
           {produitsFiltres.map((prod) => (
-            <div key={prod.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between hover:border-amber-400 transition-all">
-              <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">
-                    {prod.categorie}
-                  </span>
-                  <span className="text-slate-500 font-medium">{prod.boutiqueNom}</span>
+            <div
+              key={prod.id}
+              onClick={() => {
+                setProduitDetail(prod);
+                if (prod.variations && prod.variations.length > 0) {
+                  setVariationChoisie(prod.variations[0]);
+                }
+              }}
+              className="group bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between hover:border-amber-400 hover:shadow-md transition-all cursor-pointer relative"
+            >
+              {/* 1. IMAGE CONTAINER */}
+              <div className="relative w-full h-36 sm:h-44 bg-slate-100 overflow-hidden">
+                <Image
+                  src={prod.imageUrl}
+                  alt={prod.nom}
+                  fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+
+                {/* Badges Overlay */}
+                <div className="absolute top-2 left-2 flex flex-col gap-1 items-start z-10">
+                  {prod.reductionPourcentage && (
+                    <span className="bg-rose-600 text-white font-black text-[10px] px-1.5 py-0.5 rounded shadow">
+                      -{prod.reductionPourcentage}%
+                    </span>
+                  )}
+                  {prod.badge && (
+                    <span className="bg-slate-900/90 text-amber-400 font-bold text-[9px] uppercase px-1.5 py-0.5 rounded shadow backdrop-blur-xs">
+                      {prod.badge.replace('_', ' ')}
+                    </span>
+                  )}
                 </div>
-                <h3 className="font-bold text-slate-900 text-sm leading-snug">{prod.nom}</h3>
-                <p className="text-xs text-slate-600 line-clamp-2">{prod.description}</p>
               </div>
 
-              <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-base font-extrabold text-slate-900">
-                  {prod.prix.toLocaleString()} FCFA
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setProduitDetail(prod)}
-                    className="p-1.5 bg-slate-200 text-slate-800 rounded-xl hover:bg-slate-300"
-                    title="Voir Fiche Produit"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => ajouterAuPanier(prod)}
-                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow"
-                  >
-                    <Plus className="w-4 h-4" /> Ajouter
-                  </button>
+              {/* CARD BODY CONTENT */}
+              <div className="p-3 space-y-2 flex-grow flex flex-col justify-between">
+                <div>
+                  {/* 2. PRIX & ANCIEN PRIX */}
+                  <div className="flex items-baseline gap-1.5 flex-wrap">
+                    <span className="text-sm sm:text-base font-black text-slate-900">
+                      {prod.prix.toLocaleString()} FCFA
+                    </span>
+                    {prod.ancienPrix && (
+                      <span className="text-[11px] text-slate-400 line-through font-medium">
+                        {prod.ancienPrix.toLocaleString()} FCFA
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 3. NOM DU PRODUIT */}
+                  <h3 className="font-extrabold text-slate-900 text-xs leading-snug line-clamp-2 mt-0.5 group-hover:text-amber-600 transition-colors">
+                    {prod.nom}
+                  </h3>
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                  {/* 4. METADATA COMMERCIALES (Note / Ventes / Avis) */}
+                  <div className="flex items-center gap-1 text-[11px] text-slate-600">
+                    <div className="flex items-center text-amber-500 font-bold">
+                      <Star className="w-3 h-3 fill-amber-400 mr-0.5" />
+                      <span>{prod.note}</span>
+                    </div>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-[10px] text-slate-500">{prod.nombreVentes} vendus</span>
+                  </div>
+
+                  {/* 5. BOUTIQUE / VENDEUR */}
+                  <div className="flex items-center justify-between text-[11px] border-t border-slate-100 pt-1.5 text-slate-500">
+                    <span className="font-semibold text-slate-700 truncate max-w-[120px]">
+                      {prod.boutiqueNom}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        ajouterAuPanier(prod);
+                      }}
+                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 p-1.5 rounded-lg shadow font-bold text-[10px] flex items-center justify-center shrink-0"
+                      title="Ajouter au Panier"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -313,7 +371,12 @@ export default function AcheteurPage() {
                       <div className="space-y-1">
                         {items.map((item) => (
                           <div key={item.produit.id} className="flex justify-between items-center">
-                            <span>{item.quantite}x {item.produit.nom}</span>
+                            <span>
+                              {item.quantite}x {item.produit.nom}
+                              {item.variationSelectionnee && (
+                                <span className="text-[10px] text-slate-500 ml-1">({item.variationSelectionnee})</span>
+                              )}
+                            </span>
                             <div className="flex items-center gap-2">
                               <span className="font-semibold">{(item.produit.prix * item.quantite).toLocaleString()} FCFA</span>
                               <button onClick={() => retirerDuPanier(item.produit.id)} className="text-slate-400 hover:text-rose-600">
@@ -443,42 +506,122 @@ export default function AcheteurPage() {
         </div>
       </div>
 
-      {/* Product Detail Modal */}
+      {/* Enhanced Product Detail Modal / Fiche Produit Harmonisée */}
       {produitDetail && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-xl border border-slate-200">
-            <div className="flex justify-between items-start">
-              <div>
-                <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-xs">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl border border-slate-200 p-6 relative">
+            <button
+              onClick={() => setProduitDetail(null)}
+              className="absolute top-4 right-4 bg-slate-100 p-1.5 rounded-full text-slate-500 hover:text-slate-800 z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* A. MEDIA SECTION */}
+            <div className="relative w-full h-56 sm:h-64 bg-slate-100 rounded-xl overflow-hidden">
+              <Image
+                src={produitDetail.imageUrl}
+                alt={produitDetail.nom}
+                fill
+                sizes="(max-width: 640px) 100vw, 500px"
+                className="object-cover"
+              />
+              <div className="absolute top-3 left-3 flex gap-1">
+                <span className="bg-amber-500 text-slate-950 font-black text-xs px-2 py-0.5 rounded shadow">
                   {produitDetail.categorie}
                 </span>
-                <h3 className="font-extrabold text-slate-900 text-lg mt-1">{produitDetail.nom}</h3>
-                <p className="text-xs text-slate-500 font-medium">{produitDetail.boutiqueNom}</p>
+                {produitDetail.reductionPourcentage && (
+                  <span className="bg-rose-600 text-white font-black text-xs px-2 py-0.5 rounded shadow">
+                    -{produitDetail.reductionPourcentage}%
+                  </span>
+                )}
               </div>
-              <button onClick={() => setProduitDetail(null)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
-            <p className="text-xs text-slate-700 leading-relaxed">{produitDetail.description}</p>
+            {/* B. INFORMATIONS PRODUIT & VENDEUR */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="font-extrabold text-slate-900 text-lg sm:text-xl leading-snug">
+                    {produitDetail.nom}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-semibold flex items-center gap-1 mt-0.5">
+                    <Store className="w-3.5 h-3.5 text-amber-500" /> {produitDetail.boutiqueNom}
+                  </p>
+                </div>
+              </div>
 
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1 text-xs">
-              <p><strong>Stock disponible :</strong> {produitDetail.stock} unités</p>
-              <p><strong>Mode de livraison :</strong> Livreur SOKU ou Retrait sur place</p>
+              {/* Pricing & Commercial Indicators */}
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-slate-900">
+                    {produitDetail.prix.toLocaleString()} FCFA
+                  </span>
+                  {produitDetail.ancienPrix && (
+                    <span className="text-sm text-slate-400 line-through font-semibold">
+                      {produitDetail.ancienPrix.toLocaleString()} FCFA
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                  <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
+                  <span className="font-bold">{produitDetail.note}</span>
+                  <span className="text-slate-400">({produitDetail.nombreAvis} avis)</span>
+                </div>
+              </div>
             </div>
 
-            <div className="flex justify-between items-center pt-2">
-              <span className="text-xl font-black text-slate-900">
-                {produitDetail.prix.toLocaleString()} FCFA
-              </span>
+            {/* C. VARIANTES SELECTION */}
+            {produitDetail.variations && produitDetail.variations.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <label className="block text-xs font-bold text-slate-800">
+                  Choisissez une variante :
+                </label>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {produitDetail.variations.map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setVariationChoisie(v)}
+                      className={`px-3 py-1.5 rounded-xl border font-semibold transition-all ${
+                        variationChoisie === v
+                          ? 'bg-slate-900 text-white border-slate-900 shadow'
+                          : 'bg-slate-50 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* D. DESCRIPTION */}
+            <div className="space-y-1 pt-2 border-t border-slate-100">
+              <h4 className="text-xs font-bold text-slate-900">Description :</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">{produitDetail.description}</p>
+            </div>
+
+            {/* E. LIVRAISON & GARANTIE */}
+            <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs space-y-1 text-amber-950">
+              <p className="font-bold flex items-center gap-1">
+                <ShieldCheck className="w-4 h-4 text-amber-600" /> Protection SOKU & Sequestre Non-Custodial
+              </p>
+              <p className="text-[11px] text-amber-800">
+                Vos fonds restent bloqués de manière sécurisée jusqu&apos;à la confirmation de votre livraison.
+              </p>
+            </div>
+
+            {/* F. STICKY / BOTTOM ACTION BAR */}
+            <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
               <button
                 onClick={() => {
-                  ajouterAuPanier(produitDetail);
+                  ajouterAuPanier(produitDetail, variationChoisie);
                   setProduitDetail(null);
                 }}
-                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1 shadow"
+                className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow"
               >
-                <Plus className="w-4 h-4" /> Ajouter au panier
+                <ShoppingBasket className="w-4 h-4 fill-slate-950" /> Ajouter au panier avec cette variante
               </button>
             </div>
           </div>

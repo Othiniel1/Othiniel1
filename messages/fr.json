@@ -20,6 +20,18 @@
     "livree": "Livrée",
     "annulee": "Annulée"
   },
+  "badges": {
+    "nouveau": "Nouveau",
+    "populaire": "Populaire",
+    "promo": "Promo",
+    "stock_faible": "Stock Faible"
+  },
+  "product": {
+    "ajouter_au_panier": "Ajouter au panier",
+    "vendus": "vendus",
+    "variante": "Choisissez une variante",
+    "sequestre_notice": "Protection SOKU & Séquestre Non-Custodial"
+  },
   "vehicules": {
     "moto_ktm": "Moto KTM",
     "scooter_125": "Scooter 125cc",

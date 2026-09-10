@@ -62,6 +62,11 @@ export default function VendeurPage() {
       categorie: nouvelleCategorie,
       description: 'Produit ajouté depuis le tableau de bord vendeur.',
       stock: Number(nouveauStock),
+      imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+      note: 5.0,
+      nombreAvis: 1,
+      nombreVentes: 0,
+      badge: 'NOUVEAU',
     });
 
     setNouveauNom('');
