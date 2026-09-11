@@ -2,45 +2,77 @@
   "common": {
     "title": "SOKU",
     "welcome": "Bienvenido a SOKU",
-    "tagline": "Marketplace móvil para el comercio local"
+    "tagline": "Mercado móvil para el comercio local",
+    "fonds_sequestres": "Fondos en custodia no custodia de SOKU",
+    "appel_simule": "Llamada simulada en el prototipo SOKU"
   },
   "roles": {
     "vendeur": "SOKU Vendedor",
     "acheteur": "SOKU Comprador",
     "livreur": "SOKU Repartidor"
   },
+  "navigation": {
+    "ecosysteme": "Ecosistema SOKU",
+    "changer_app": "Cambiar de aplicación",
+    "acheteur_description": "Comprar, descubrir y rastrear",
+    "vendeur_description": "Vender, gestionar y operar",
+    "livreur_description": "Recibir, ejecutar y entregar",
+    "catalogue": "Catálogo",
+    "panier": "Carrito",
+    "commandes": "Pedidos",
+    "suivi": "Rastreo en tiempo real",
+    "dashboard": "Panel de Control",
+    "produits": "Productos",
+    "stock": "Gestión de Inventario",
+    "missions": "Misiones",
+    "tournee": "Rutas Agrupadas",
+    "profil": "Perfil y Vehículo",
+    "disponibilite": "Disponibilidad"
+  },
   "status": {
-    "creee": "Creada",
-    "payee": "Pagada",
-    "en_attente": "En espera",
+    "creee": "Creado",
+    "payee": "Pagado",
+    "en_attente": "Pendiente",
+    "en_attente_preparation": "Pendiente de preparación",
     "en_preparation": "En preparación",
-    "prete": "Lista",
+    "prete": "Listo para recogida",
     "remise_au_livreur": "Entregado al repartidor",
-    "en_livraison": "En camino",
-    "livree": "Entregada",
-    "annulee": "Cancelada"
+    "en_livraison": "En reparto",
+    "livree": "Entregado",
+    "annulee": "Cancelado"
+  },
+  "ui_states": {
+    "chargement": "Cargando...",
+    "aucun_element": "No se encontraron elementos.",
+    "panier_vide": "Su carrito está vacío actualmente.",
+    "aucune_commande": "Sin pedidos registrados.",
+    "aucune_mission": "No hay misiones disponibles de momento.",
+    "erreur_titre": "Ocurrió un error",
+    "succes_titre": "Operación exitosa",
+    "annuler": "Cancelar",
+    "confirmer": "Confirmar",
+    "fermer": "Cerrar",
+    "reessayer": "Reintentar"
   },
   "badges": {
     "nouveau": "Nuevo",
     "populaire": "Popular",
     "promo": "Oferta",
-    "stock_faible": "Stock Bajo"
+    "stock_faible": "Poco Stock"
   },
   "product": {
     "ajouter_au_panier": "Añadir al carrito",
     "vendus": "vendidos",
     "variante": "Elija una variante",
-    "sequestre_notice": "Protección SOKU y Fideicomiso No Custodio"
-  },
-  "vehicules": {
-    "moto_ktm": "Moto KTM",
-    "scooter_125": "Scooter 125cc",
-    "velo_cargo": "Bicicleta Cargo",
-    "moto_suzuki": "Moto Suzuki 150",
-    "mini_camionnette": "Mini-Camioneta"
+    "sequestre_notice": "Protección SOKU y Custodia No Custodial"
   },
   "point_soku": {
-    "evaluation_titre": "¿Fue fácil de encontrar el Punto SOKU?",
+    "titre": "Punto SOKU de Entrega",
+    "configurer": "Configurar Punto SOKU",
+    "repere_visuel": "Punto de referencia y foto simulada",
+    "instruction": "Instrucciones de entrega",
+    "instructions_placeholder": "Ej: Dejar en el Quiosco con Maman Ami",
+    "evaluation_titre": "¿Fue fácil encontrar el punto SOKU?",
     "facile": "Fácil",
     "moyen": "Medio",
     "difficile": "Difícil",
@@ -52,13 +84,35 @@
       "mal_indique": "Punto mal indicado"
     }
   },
+  "contact": {
+    "appeler_livreur": "Llamar al Repartidor",
+    "appeler_client": "Llamar al Destinatario",
+    "contact_direct": "Contacto directo vinculado a la misión activa",
+    "securise_notice": "Comunicación operativa restringida a pedidos en curso."
+  },
+  "vehicules": {
+    "moto_ktm": "Motocicleta KTM",
+    "scooter_125": "Scooter 125cc",
+    "velo_cargo": "Bicicleta de Carga",
+    "moto_suzuki": "Motocicleta Suzuki 150",
+    "mini_camionnette": "Furgoneta Pequeña"
+  },
+  "missions": {
+    "titre_proposees": "Propuestas de Misiones SOKU",
+    "mutualisee": "SOKU Eco (Ruta Agrupada)",
+    "dediee": "SOKU Prioritario (Exprés Dedicado)",
+    "soku_propose": "SOKU propone, el repartidor decide libremente.",
+    "accepter": "Aceptar misión",
+    "refuser": "Rechazar",
+    "jauges": "Medidores de Capacidad (Peso, Volumen, Bultos)"
+  },
   "algorithmes": {
     "titre": "Análisis Algorítmico SOKU",
-    "avertissement": "El análisis algorítmico proporciona diagnósticos y recomendaciones. El usuario es el único que decide.",
+    "avertissement": "El análisis algorítmico ofrece hallazgos y sugerencias. El usuario sigue siendo el único tomador de decisiones.",
     "blocs": {
       "donnees": "1. DATOS",
       "analyse": "2. ANÁLISIS",
-      "constat": "3. DIAGNÓSTICO",
+      "constat": "3. HALLAZGO",
       "explication": "4. EXPLICACIÓN",
       "recommandation": "5. RECOMENDACIÓN",
       "decision": "Decisión del Usuario"

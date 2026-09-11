@@ -2,23 +2,57 @@
   "common": {
     "title": "SOKU",
     "welcome": "Welcome to SOKU",
-    "tagline": "Mobile-first marketplace for local commerce"
+    "tagline": "Mobile-first marketplace for local trade",
+    "fonds_sequestres": "SOKU non-custodial escrow funds",
+    "appel_simule": "Simulated call within SOKU prototype framework"
   },
   "roles": {
     "vendeur": "SOKU Seller",
     "acheteur": "SOKU Buyer",
     "livreur": "SOKU Driver"
   },
+  "navigation": {
+    "ecosysteme": "SOKU Ecosystem",
+    "changer_app": "Switch application",
+    "acheteur_description": "Buy, discover & track",
+    "vendeur_description": "Sell, manage & operate",
+    "livreur_description": "Receive, execute & deliver",
+    "catalogue": "Catalog",
+    "panier": "Cart",
+    "commandes": "Orders",
+    "suivi": "Realtime Tracking",
+    "dashboard": "Dashboard",
+    "produits": "Products",
+    "stock": "Stock Management",
+    "missions": "Missions",
+    "tournee": "Grouped Tours",
+    "profil": "Profile & Vehicle",
+    "disponibilite": "Availability"
+  },
   "status": {
     "creee": "Created",
     "payee": "Paid",
     "en_attente": "Pending",
+    "en_attente_preparation": "Pending preparation",
     "en_preparation": "In preparation",
-    "prete": "Ready",
-    "remise_au_livreur": "Handed over to driver",
+    "prete": "Ready for pickup",
+    "remise_au_livreur": "Handed to driver",
     "en_livraison": "Out for delivery",
     "livree": "Delivered",
     "annulee": "Cancelled"
+  },
+  "ui_states": {
+    "chargement": "Loading...",
+    "aucun_element": "No items found.",
+    "panier_vide": "Your cart is currently empty.",
+    "aucune_commande": "No orders recorded.",
+    "aucune_mission": "No missions available at the moment.",
+    "erreur_titre": "An error occurred",
+    "succes_titre": "Operation successful",
+    "annuler": "Cancel",
+    "confirmer": "Confirm",
+    "fermer": "Close",
+    "reessayer": "Retry"
   },
   "badges": {
     "nouveau": "New",
@@ -32,29 +66,49 @@
     "variante": "Choose a variant",
     "sequestre_notice": "SOKU Protection & Non-Custodial Escrow"
   },
-  "vehicules": {
-    "moto_ktm": "KTM Motorcycle",
-    "scooter_125": "Scooter 125cc",
-    "velo_cargo": "Cargo Bike",
-    "moto_suzuki": "Suzuki 150 Motorcycle",
-    "mini_camionnette": "Mini-Van"
-  },
   "point_soku": {
-    "evaluation_titre": "Was the SOKU Point easy to find?",
+    "titre": "Delivery Point SOKU",
+    "configurer": "Configure Point SOKU",
+    "repere_visuel": "Visual Landmark & Simulated Photo",
+    "instruction": "Delivery Instruction",
+    "instructions_placeholder": "Ex: Drop at Kiosk with Maman Ami",
+    "evaluation_titre": "Was the Point SOKU easy to find?",
     "facile": "Easy",
     "moyen": "Medium",
-    "difficile": "Difficult",
+    "difficile": "Hard",
     "motifs": {
       "gps": "Inaccurate GPS",
       "acces": "Difficult access / Roadworks",
       "photo": "Insufficient landmark photo",
-      "client_absent": "Absent client",
-      "mal_indique": "Poorly indicated point"
+      "client_absent": "Customer absent",
+      "mal_indique": "Poorly marked point"
     }
+  },
+  "contact": {
+    "appeler_livreur": "Call Driver",
+    "appeler_client": "Call Recipient",
+    "contact_direct": "Direct contact linked to active mission",
+    "securise_notice": "Operational communication restricted to ongoing orders."
+  },
+  "vehicules": {
+    "moto_ktm": "KTM Motorcycle",
+    "scooter_125": "125cc Scooter",
+    "velo_cargo": "Cargo Bike",
+    "moto_suzuki": "Suzuki 150 Motorcycle",
+    "mini_camionnette": "Mini-Van"
+  },
+  "missions": {
+    "titre_proposees": "SOKU Mission Proposals",
+    "mutualisee": "SOKU Eco (Grouped Tour)",
+    "dediee": "SOKU Priority (Dedicated Express)",
+    "soku_propose": "SOKU proposes, driver freely decides.",
+    "accepter": "Accept mission",
+    "refuser": "Decline",
+    "jauges": "Capacity Gauges (Weight, Volume, Items)"
   },
   "algorithmes": {
     "titre": "SOKU Algorithmic Analysis",
-    "avertissement": "Algorithmic analysis provides insights and recommendations. The user remains the sole decision maker.",
+    "avertissement": "Algorithmic analysis provides insights and suggestions. User remains sole decision maker.",
     "blocs": {
       "donnees": "1. DATA",
       "analyse": "2. ANALYSIS",
