@@ -1,121 +1,73 @@
 {
-  "common": {
+  "header": {
     "title": "SOKU",
-    "welcome": "Welcome to SOKU",
-    "tagline": "Mobile-first marketplace for local trade",
-    "fonds_sequestres": "SOKU non-custodial escrow funds",
-    "appel_simule": "Simulated call within SOKU prototype framework"
+    "subtitle": "Single Ecosystem"
   },
-  "roles": {
-    "vendeur": "SOKU Seller",
+  "nav": {
     "acheteur": "SOKU Buyer",
+    "vendeur": "SOKU Seller",
     "livreur": "SOKU Driver"
   },
-  "navigation": {
-    "ecosysteme": "SOKU Ecosystem",
-    "changer_app": "Switch application",
-    "acheteur_description": "Buy, discover & track",
-    "vendeur_description": "Sell, manage & operate",
-    "livreur_description": "Receive, execute & deliver",
-    "catalogue": "Catalog",
-    "panier": "Cart",
-    "commandes": "Orders",
-    "suivi": "Realtime Tracking",
-    "dashboard": "Dashboard",
-    "produits": "Products",
-    "stock": "Stock Management",
-    "missions": "Missions",
-    "tournee": "Grouped Tours",
-    "profil": "Profile & Vehicle",
-    "disponibilite": "Availability"
+  "roles": {
+    "acheteur_titre": "SOKU Buyer",
+    "acheteur_desc": "Buy & Track your deliveries",
+    "vendeur_titre": "SOKU Seller",
+    "vendeur_desc": "Sell & Manage sub-orders",
+    "livreur_titre": "SOKU Driver",
+    "livreur_desc": "Execute & Deliver missions"
   },
-  "status": {
-    "creee": "Created",
-    "payee": "Paid",
-    "en_attente": "Pending",
-    "en_attente_preparation": "Pending preparation",
-    "en_preparation": "In preparation",
-    "prete": "Ready for pickup",
-    "remise_au_livreur": "Handed to driver",
-    "en_livraison": "Out for delivery",
-    "livree": "Delivered",
-    "annulee": "Cancelled"
-  },
-  "ui_states": {
-    "chargement": "Loading...",
-    "aucun_element": "No items found.",
-    "panier_vide": "Your cart is currently empty.",
-    "aucune_commande": "No orders recorded.",
-    "aucune_mission": "No missions available at the moment.",
-    "erreur_titre": "An error occurred",
-    "succes_titre": "Operation successful",
-    "annuler": "Cancel",
-    "confirmer": "Confirm",
+  "communs": {
+    "frais_livraison": "Delivery fee",
+    "total": "Total",
+    "statut": "Status",
+    "rechercher": "Search...",
+    "action": "Action",
+    "retour": "Back",
     "fermer": "Close",
-    "reessayer": "Retry"
+    "annuler": "Cancel",
+    "valider": "Validate",
+    "confirmer": "Confirm",
+    "en_savoir_plus": "Learn more"
   },
-  "badges": {
-    "nouveau": "New",
-    "populaire": "Popular",
-    "promo": "Sale",
-    "stock_faible": "Low Stock"
+  "acheteur": {
+    "titre": "Discovery & Shopping Space",
+    "soustitre": "Browse local catalog, organize multi-vendor cart and track SOKU deliveries.",
+    "onglets": {
+      "catalogue": "Catalog",
+      "panier": "Cart",
+      "commandes": "Order Tracking"
+    },
+    "panier_vide": "Your cart is empty",
+    "panier_decompo": "Multi-Vendor Breakdown (Single SOKU Payment)",
+    "point_soku_config": "Configured Delivery SOKU Point",
+    "changer_point": "Change / Configure"
   },
-  "product": {
-    "ajouter_au_panier": "Add to cart",
-    "vendus": "sold",
-    "variante": "Choose a variant",
-    "sequestre_notice": "SOKU Protection & Non-Custodial Escrow"
+  "vendeur": {
+    "titre": "Sales & Preparation Management",
+    "soustitre": "Manage received sub-orders, update preparation status and track store performance.",
+    "ajouter_produit": "Add Product",
+    "sous_commandes": "Sub-Orders to Process",
+    "passer_prete": "Mark as Ready",
+    "remettre_livreur": "Hand over to Driver"
   },
-  "point_soku": {
-    "titre": "Delivery Point SOKU",
-    "configurer": "Configure Point SOKU",
-    "repere_visuel": "Visual Landmark & Simulated Photo",
-    "instruction": "Delivery Instruction",
-    "instructions_placeholder": "Ex: Drop at Kiosk with Maman Ami",
-    "evaluation_titre": "Was the Point SOKU easy to find?",
-    "facile": "Easy",
-    "moyen": "Medium",
-    "difficile": "Hard",
-    "motifs": {
-      "gps": "Inaccurate GPS",
-      "acces": "Difficult access / Roadworks",
-      "photo": "Insufficient landmark photo",
-      "client_absent": "Customer absent",
-      "mal_indique": "Poorly marked point"
-    }
+  "livreur": {
+    "titre": "Execution & Delivery Space",
+    "soustitre": "View offered missions, optimize route time and manage deliveries.",
+    "principe_liberte": "SOKU Principle: The driver retains total freedom of acceptance",
+    "principe_desc": "SOKU proposes pooled or direct missions. You are the sole decision maker to accept or decline each mission.",
+    "missions_proposees": "Offered Missions",
+    "accepter": "Accept Mission",
+    "decliner": "Decline",
+    "valider_livraison": "Validate Delivery Completed"
   },
-  "contact": {
-    "appeler_livreur": "Call Driver",
-    "appeler_client": "Call Recipient",
-    "contact_direct": "Direct contact linked to active mission",
-    "securise_notice": "Operational communication restricted to ongoing orders."
+  "paiement": {
+    "titre": "Single Payment & Non-Custodial Escrow",
+    "avertissement": "Funds are securely locked and released only upon delivery confirmation.",
+    "methodes": "Orange Money, Wave, MTN MoMo, Credit Card"
   },
-  "vehicules": {
-    "moto_ktm": "KTM Motorcycle",
-    "scooter_125": "125cc Scooter",
-    "velo_cargo": "Cargo Bike",
-    "moto_suzuki": "Suzuki 150 Motorcycle",
-    "mini_camionnette": "Mini-Van"
-  },
-  "missions": {
-    "titre_proposees": "SOKU Mission Proposals",
-    "mutualisee": "SOKU Eco (Grouped Tour)",
-    "dediee": "SOKU Priority (Dedicated Express)",
-    "soku_propose": "SOKU proposes, driver freely decides.",
-    "accepter": "Accept mission",
-    "refuser": "Decline",
-    "jauges": "Capacity Gauges (Weight, Volume, Items)"
-  },
-  "algorithmes": {
-    "titre": "SOKU Algorithmic Analysis",
-    "avertissement": "Algorithmic analysis provides insights and suggestions. User remains sole decision maker.",
-    "blocs": {
-      "donnees": "1. DATA",
-      "analyse": "2. ANALYSIS",
-      "constat": "3. FINDING",
-      "explication": "4. EXPLANATION",
-      "recommandation": "5. RECOMMENDATION",
-      "decision": "User Decision"
-    }
+  "insights": {
+    "suggere_proximite": "Suggested for you nearby",
+    "performance_stock": "Commercial Performance & Store Stock",
+    "rendement_temps": "Yield per Idle Time & Capacity"
   }
 }

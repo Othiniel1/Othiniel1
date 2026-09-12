@@ -1,121 +1,73 @@
 {
-  "common": {
+  "header": {
     "title": "SOKU",
-    "welcome": "Bienvenue sur SOKU",
-    "tagline": "Marketplace mobile-first pour le commerce local",
-    "fonds_sequestres": "Fonds sous séquestre non-custodial SOKU",
-    "appel_simule": "Appel simulé dans le cadre du prototype SOKU"
+    "subtitle": "Écosystème Unique"
   },
-  "roles": {
-    "vendeur": "SOKU Vendeur",
+  "nav": {
     "acheteur": "SOKU Acheteur",
+    "vendeur": "SOKU Vendeur",
     "livreur": "SOKU Livreur"
   },
-  "navigation": {
-    "ecosysteme": "Écosystème SOKU",
-    "changer_app": "Changer d'application",
-    "acheteur_description": "Acheter, découvrir & suivre",
-    "vendeur_description": "Vendre, gérer & piloter",
-    "livreur_description": "Recevoir, exécuter & livrer",
-    "catalogue": "Catalogue",
-    "panier": "Panier",
-    "commandes": "Commandes",
-    "suivi": "Suivi Realtime",
-    "dashboard": "Tableau de Bord",
-    "produits": "Produits",
-    "stock": "Gestion Stock",
-    "missions": "Missions",
-    "tournee": "Tournées Groupées",
-    "profil": "Profil & Véhicule",
-    "disponibilite": "Disponibilité"
+  "roles": {
+    "acheteur_titre": "SOKU Acheteur",
+    "acheteur_desc": "Acheter & Suivre vos livraisons",
+    "vendeur_titre": "SOKU Vendeur",
+    "vendeur_desc": "Vendre & Gérer vos sous-commandes",
+    "livreur_titre": "SOKU Livreur",
+    "livreur_desc": "Exécuter & Livrer vos missions"
   },
-  "status": {
-    "creee": "Créée",
-    "payee": "Payée",
-    "en_attente": "En attente",
-    "en_attente_preparation": "En attente de préparation",
-    "en_preparation": "En préparation",
-    "prete": "Prête pour collecte",
-    "remise_au_livreur": "Remise au livreur",
-    "en_livraison": "En cours de livraison",
-    "livree": "Livrée",
-    "annulee": "Annulée"
-  },
-  "ui_states": {
-    "chargement": "Chargement en cours...",
-    "aucun_element": "Aucun élément trouvé.",
-    "panier_vide": "Votre panier est vide pour le moment.",
-    "aucune_commande": "Aucune commande enregistrée.",
-    "aucune_mission": "Aucune mission disponible pour l'instant.",
-    "erreur_titre": "Une erreur est survenue",
-    "succes_titre": "Opération réussie",
-    "annuler": "Annuler",
-    "confirmer": "Confirmer",
+  "communs": {
+    "frais_livraison": "Frais de livraison",
+    "total": "Total",
+    "statut": "Statut",
+    "rechercher": "Rechercher...",
+    "action": "Action",
+    "retour": "Retour",
     "fermer": "Fermer",
-    "reessayer": "Réessayer"
+    "annuler": "Annuler",
+    "valider": "Valider",
+    "confirmer": "Confirmer",
+    "en_savoir_plus": "En savoir plus"
   },
-  "badges": {
-    "nouveau": "Nouveau",
-    "populaire": "Populaire",
-    "promo": "Promo",
-    "stock_faible": "Stock Faible"
+  "acheteur": {
+    "titre": "Espace Découverte & Achats",
+    "soustitre": "Parcourez le catalogue local, organisez votre panier multi-vendeurs et suivez vos livraisons SOKU.",
+    "onglets": {
+      "catalogue": "Catalogue",
+      "panier": "Panier",
+      "commandes": "Suivi Commandes"
+    },
+    "panier_vide": "Votre panier est vide",
+    "panier_decompo": "Décomposition Multi-Vendeurs (Paiement Unique SOKU)",
+    "point_soku_config": "Point SOKU de Livraison Configuré",
+    "changer_point": "Changer / Configurer"
   },
-  "product": {
-    "ajouter_au_panier": "Ajouter au panier",
-    "vendus": "vendus",
-    "variante": "Choisissez une variante",
-    "sequestre_notice": "Protection SOKU & Séquestre Non-Custodial"
+  "vendeur": {
+    "titre": "Gestion Commerciale & Préparation",
+    "soustitre": "Gérez vos sous-commandes reçues, mettez à jour la préparation et suivez vos performances.",
+    "ajouter_produit": "Ajouter Produit",
+    "sous_commandes": "Sous-Commandes à Traiter",
+    "passer_prete": "Marquer comme Prête",
+    "remettre_livreur": "Remettre au Livreur"
   },
-  "point_soku": {
-    "titre": "Point SOKU de livraison",
-    "configurer": "Configurer le Point SOKU",
-    "repere_visuel": "Repère visuel & Photo simulée",
-    "instruction": "Instruction de livraison",
-    "instructions_placeholder": "Ex: Déposer au Kiosque auprès de Maman Ami",
-    "evaluation_titre": "Le point SOKU était-il facile à trouver ?",
-    "facile": "Facile",
-    "moyen": "Moyen",
-    "difficile": "Difficile",
-    "motifs": {
-      "gps": "GPS imprécis",
-      "acces": "Accès difficile / Travaux",
-      "photo": "Photo repère insuffisante",
-      "client_absent": "Client absent",
-      "mal_indique": "Point mal indiqué"
-    }
+  "livreur": {
+    "titre": "Espace Exécution & Tournées",
+    "soustitre": "Consultez les missions proposées, optimisez votre temps de parcours et gérez vos livraisons.",
+    "principe_liberte": "Principe SOKU : Le livreur conserve la liberté totale d'acceptation",
+    "principe_desc": "SOKU propose des missions mutualisées ou directes. Vous êtes seul décideur d'accepter ou de décliner chaque mission.",
+    "missions_proposees": "Missions Proposées",
+    "accepter": "Accepter la Mission",
+    "decliner": "Décliner",
+    "valider_livraison": "Valider Livraison Effectuée"
   },
-  "contact": {
-    "appeler_livreur": "Appeler le Livreur",
-    "appeler_client": "Appeler le Destinataire",
-    "contact_direct": "Contact direct lié à la mission active",
-    "securise_notice": "Communication opérationnelle réservée aux commandes en cours."
+  "paiement": {
+    "titre": "Paiement Unique & Séquestre Non-Custodial",
+    "avertissement": "Les fonds sont bloqués de façon sécurisée et libérés uniquement à la confirmation de livraison.",
+    "methodes": "Orange Money, Wave, MTN MoMo, Carte Bancaire"
   },
-  "vehicules": {
-    "moto_ktm": "Moto KTM",
-    "scooter_125": "Scooter 125cc",
-    "velo_cargo": "Vélo Cargo",
-    "moto_suzuki": "Moto Suzuki 150",
-    "mini_camionnette": "Mini-Camionnette"
-  },
-  "missions": {
-    "titre_proposees": "Propositions de missions SOKU",
-    "mutualisee": "SOKU Éco (Tournée Mutualisée)",
-    "dediee": "SOKU Prioritaire (Express Dédié)",
-    "soku_propose": "SOKU propose, le livreur décide librement.",
-    "accepter": "Accepter la mission",
-    "refuser": "Refuser",
-    "jauges": "Jauges de capacité (Poids, Volume, Colis)"
-  },
-  "algorithmes": {
-    "titre": "Analyse algorithmique SOKU",
-    "avertissement": "L'analyse algorithmique fournit un constat et une recommandation. L'utilisateur reste le seul décideur.",
-    "blocs": {
-      "donnees": "1. DONNÉES",
-      "analyse": "2. ANALYSE",
-      "constat": "3. CONSTAT",
-      "explication": "4. EXPLICATION",
-      "recommandation": "5. RECOMMANDATION",
-      "decision": "Décision de l'utilisateur"
-    }
+  "insights": {
+    "suggere_proximite": "Suggéré pour vous à proximité",
+    "performance_stock": "Performance Commerciale & Stock Boutique",
+    "rendement_temps": "Rendement par Temps Immobilisé & Capacité"
   }
 }
