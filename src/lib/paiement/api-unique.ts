@@ -34,7 +34,7 @@ export interface ApiPaiementUnique {
   verifierStatut(referenceTransaction: string): Promise<ResultatPaiement>;
   traiterWebhook(payload: Record<string, unknown>, signature?: string): Promise<ResultatPaiement>;
   validerPreuvesEtDebloquer(params: ParametresValidationPreuve): Promise<ResultatPaiement>;
-  rembourser(referenceTransaction: string, motif?: string): Promise<ResultatPaiement>;
+  rembourser(referenceTransaction: string, montant?: number, motif?: string): Promise<ResultatPaiement>;
 }
 
 /**
@@ -103,15 +103,16 @@ export class ServicePaiementUnique implements ApiPaiementUnique {
     };
   }
 
-  public async rembourser(referenceTransaction: string, motif?: string): Promise<ResultatPaiement> {
+  public async rembourser(referenceTransaction: string, montant?: number, motif?: string): Promise<ResultatPaiement> {
     return {
       succes: true,
       referenceTransaction,
       statut: 'rembourse',
-      message: `Remboursement effectue. Motif: ${motif || 'Non precise'}`,
+      message: `Remboursement effectue (${montant || 'total'} FCFA). Motif: ${motif || 'Non precise'}`,
       horodatage: new Date().toISOString(),
     };
   }
 }
 
 export const apiPaiementUnique = new ServicePaiementUnique();
+export const apiUniquePaiement = apiPaiementUnique;

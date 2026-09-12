@@ -27,7 +27,8 @@
     "annuler": "Cancel",
     "valider": "Validate",
     "confirmer": "Confirm",
-    "en_savoir_plus": "Learn more"
+    "en_savoir_plus": "Learn more",
+    "reinitialiser_demo": "Reset Demo"
   },
   "acheteur": {
     "titre": "Discovery & Shopping Space",
@@ -35,20 +36,24 @@
     "onglets": {
       "catalogue": "Catalog",
       "panier": "Cart",
-      "commandes": "Order Tracking"
+      "commandes": "Order Tracking",
+      "historique": "History"
     },
     "panier_vide": "Your cart is empty",
     "panier_decompo": "Multi-Vendor Breakdown (Single SOKU Payment)",
     "point_soku_config": "Configured Delivery SOKU Point",
-    "changer_point": "Change / Configure"
+    "changer_point": "Change / Configure",
+    "rupture_stock": "Product out of stock"
   },
   "vendeur": {
-    "titre": "Sales & Preparation Management",
-    "soustitre": "Manage received sub-orders, update preparation status and track store performance.",
+    "titre": "Sales & Inventory Management",
+    "soustitre": "Manage received sub-orders, update stock/prices and track store performance.",
     "ajouter_produit": "Add Product",
     "sous_commandes": "Sub-Orders to Process",
     "passer_prete": "Mark as Ready",
-    "remettre_livreur": "Hand over to Driver"
+    "remettre_livreur": "Hand over to Driver",
+    "ca_encaisse": "Collected Revenue (Escrow Released)",
+    "editer_stock_prix": "Edit Stock / Price"
   },
   "livreur": {
     "titre": "Execution & Delivery Space",
@@ -58,7 +63,8 @@
     "missions_proposees": "Offered Missions",
     "accepter": "Accept Mission",
     "decliner": "Decline",
-    "valider_livraison": "Validate Delivery Completed"
+    "valider_livraison": "Validate Delivery Completed",
+    "total_gains_simules": "Total Simulated Earnings (Completed Missions)"
   },
   "paiement": {
     "titre": "Single Payment & Non-Custodial Escrow",

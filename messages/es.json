@@ -27,7 +27,8 @@
     "annuler": "Cancelar",
     "valider": "Validar",
     "confirmer": "Confirmar",
-    "en_savoir_plus": "Saber más"
+    "en_savoir_plus": "Saber más",
+    "reinitialiser_demo": "Reiniciar Demo"
   },
   "acheteur": {
     "titre": "Espacio Descubrimiento y Compras",
@@ -35,20 +36,24 @@
     "onglets": {
       "catalogue": "Catálogo",
       "panier": "Carrito",
-      "commandes": "Seguimiento Pedidos"
+      "commandes": "Seguimiento Pedidos",
+      "historique": "Historial"
     },
     "panier_vide": "Su carrito está vacío",
     "panier_decompo": "Desglose Multivendedor (Pago Único SOKU)",
     "point_soku_config": "Punto SOKU de Entrega Configurado",
-    "changer_point": "Cambiar / Configurar"
+    "changer_point": "Cambiar / Configurar",
+    "rupture_stock": "Producto agotado"
   },
   "vendeur": {
-    "titre": "Gestión Comercial y Preparación",
-    "soustitre": "Gestione pedidos recibidos, actualice preparación y rastree rendimiento.",
+    "titre": "Gestión Comercial e Inventario",
+    "soustitre": "Gestione pedidos recibidos, actualice stock/precios y rastree rendimiento.",
     "ajouter_produit": "Añadir Producto",
     "sous_commandes": "Subpedidos a Procesar",
     "passer_prete": "Marcar como Listo",
-    "remettre_livreur": "Entregar al Repartidor"
+    "remettre_livreur": "Entregar al Repartidor",
+    "ca_encaisse": "Ingresos Cobrados (Custodia Liberada)",
+    "editer_stock_prix": "Editar Stock / Precio"
   },
   "livreur": {
     "titre": "Espacio Ejecución y Rutas",
@@ -58,7 +63,8 @@
     "missions_proposees": "Misiones Ofrecidas",
     "accepter": "Aceptar Misión",
     "decliner": "Rechazar",
-    "valider_livraison": "Validar Entrega Completada"
+    "valider_livraison": "Validar Entrega Completada",
+    "total_gains_simules": "Ganancias Totales Simuladas (Misiones Completadas)"
   },
   "paiement": {
     "titre": "Pago Único y Custodia No Custodial",

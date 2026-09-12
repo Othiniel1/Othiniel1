@@ -1,5 +1,7 @@
 import { MOCK_PRODUITS, MOCK_MISSIONS_LIVREUR, MOCK_POINT_SOKU, MockProduit, MockMissionLivreur, MockPointSOKU } from './mock-data';
 import { busEvenements } from './evenements/bus';
+import { orchestrateur } from './orchestrateur';
+import { apiUniquePaiement } from './paiement/api-unique';
 
 export type StatutCommandeGlobale =
   | 'CREEE'
@@ -16,8 +18,9 @@ export interface SousCommandeVendeur {
   vendeurId: string;
   boutiqueNom: string;
   articles: { produit: MockProduit; quantite: number; prixUnitaire: number }[];
-  statut: 'EN_ATTENTE' | 'EN_PREPARATION' | 'PRETE' | 'REMISE_AU_LIVREUR' | 'LIVREE';
+  statut: 'EN_ATTENTE' | 'EN_PREPARATION' | 'PRETE' | 'REMISE_AU_LIVREUR' | 'LIVREE' | 'ANNULEE';
   montantSousTotal: number;
+  motifAnnulation?: string;
 }
 
 export interface CommandeGlobaleSOKU {
@@ -35,21 +38,31 @@ export interface CommandeGlobaleSOKU {
   livreurVehicule?: string;
   livreurTelephone?: string;
   dateCreation: string;
+  confirmationAcheteur?: {
+    date: string;
+    noteProduit?: number;
+    commentaire?: string;
+  };
 }
 
-// Global Shared Demo State
+const STORAGE_KEY = 'soku_mock_store_v1';
+
 class SOKUMockStore {
   private produits: MockProduit[] = [...MOCK_PRODUITS];
   private commandesGlobales: CommandeGlobaleSOKU[] = [];
   private missionsLivreur: MockMissionLivreur[] = [...MOCK_MISSIONS_LIVREUR];
   private listeners: Set<() => void> = new Set();
+  private isHydrated: boolean = false;
 
   constructor() {
     this.initialiserCommandesParDefaut();
+    // Hydrate client-side safely without SSR mismatch
+    if (typeof window !== 'undefined') {
+      setTimeout(() => this.hydraterDepuisStorage(), 0);
+    }
   }
 
   private initialiserCommandesParDefaut() {
-    // Transform mock base order into multi-vendor order structure
     const initialCmd: CommandeGlobaleSOKU = {
       id: 'cmd_8080',
       acheteurId: 'acheteur_001',
@@ -91,12 +104,55 @@ class SOKUMockStore {
     this.commandesGlobales = [initialCmd];
   }
 
+  private hydraterDepuisStorage() {
+    try {
+      if (typeof window === 'undefined') return;
+      const data = localStorage.getItem(STORAGE_KEY);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (parsed.produits && Array.isArray(parsed.produits)) this.produits = parsed.produits;
+        if (parsed.commandesGlobales && Array.isArray(parsed.commandesGlobales)) this.commandesGlobales = parsed.commandesGlobales;
+        if (parsed.missionsLivreur && Array.isArray(parsed.missionsLivreur)) this.missionsLivreur = parsed.missionsLivreur;
+      }
+    } catch {
+      // Fallback clean deterministic state
+    } finally {
+      this.isHydrated = true;
+      this.notify();
+    }
+  }
+
+  private sauvegarderDansStorage() {
+    try {
+      if (typeof window === 'undefined') return;
+      const payload = {
+        produits: this.produits,
+        commandesGlobales: this.commandesGlobales,
+        missionsLivreur: this.missionsLivreur,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // Ignore storage write issues
+    }
+  }
+
+  public reinitialiserMockStore() {
+    this.produits = [...MOCK_PRODUITS];
+    this.missionsLivreur = [...MOCK_MISSIONS_LIVREUR];
+    this.initialiserCommandesParDefaut();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    this.notify();
+  }
+
   public subscribe(listener: () => void) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
 
   private notify() {
+    this.sauvegarderDansStorage();
     this.listeners.forEach((fn) => fn());
   }
 
@@ -110,6 +166,18 @@ class SOKUMockStore {
 
   public getMissionsLivreur(): MockMissionLivreur[] {
     return this.missionsLivreur;
+  }
+
+  public modifierProduitVendeur(produitId: string, updates: { stock?: number; prix?: number }) {
+    this.produits = this.produits.map((p) => {
+      if (p.id !== produitId) return p;
+      return {
+        ...p,
+        stock: updates.stock !== undefined ? Math.max(0, updates.stock) : p.stock,
+        prix: updates.prix !== undefined ? Math.max(0, updates.prix) : p.prix,
+      };
+    });
+    this.notify();
   }
 
   public ajouterProduit(produit: Omit<MockProduit, 'id'>) {
@@ -129,6 +197,23 @@ class SOKUMockStore {
     modeLivraison: 'livreur_soku' | 'vendeur_lui_meme' | 'retrait_sur_place',
     fraisLivraison: number
   ): CommandeGlobaleSOKU {
+    // Check stock availability
+    panier.forEach(({ produit, quantite }) => {
+      const liveProd = this.produits.find((p) => p.id === produit.id);
+      if (liveProd && liveProd.stock < quantite) {
+        throw new Error(`Stock insuffisant pour le produit "${produit.nom}". Stock restant: ${liveProd.stock}`);
+      }
+    });
+
+    // Deduct stock
+    this.produits = this.produits.map((p) => {
+      const cartItem = panier.find((i) => i.produit.id === p.id);
+      if (cartItem) {
+        return { ...p, stock: Math.max(0, p.stock - cartItem.quantite) };
+      }
+      return p;
+    });
+
     // Group cart items by vendor
     const sousCommandesMap = new Map<string, SousCommandeVendeur>();
 
@@ -177,6 +262,83 @@ class SOKUMockStore {
 
     this.notify();
     return nouvelleCommande;
+  }
+
+  public annulerSousCommande(commandeId: string, sousCommandeId: string, motif: string) {
+    this.commandesGlobales = this.commandesGlobales.map((cmd) => {
+      if (cmd.id !== commandeId) return cmd;
+
+      let montantARembourser = 0;
+      const nouvellesSousCommandes = cmd.sousCommandes.map((sub) => {
+        if (sub.id !== sousCommandeId) return sub;
+        montantARembourser = sub.montantSousTotal;
+        return { ...sub, statut: 'ANNULEE' as const, motifAnnulation: motif };
+      });
+
+      // Restore stock for cancelled sub-order
+      const targetSub = cmd.sousCommandes.find((s) => s.id === sousCommandeId);
+      if (targetSub) {
+        targetSub.articles.forEach(({ produit, quantite }) => {
+          this.produits = this.produits.map((p) => {
+            if (p.id === produit.id) {
+              return { ...p, stock: p.stock + quantite };
+            }
+            return p;
+          });
+        });
+      }
+
+      // Check global status
+      const toutesAnnulees = nouvellesSousCommandes.every((s) => s.statut === 'ANNULEE');
+      const statutGlobal = toutesAnnulees ? ('ANNULEE' as const) : cmd.statutGlobal;
+
+      // Execute simulated payment refund via unique API abstraction
+      if (montantARembourser > 0) {
+        apiUniquePaiement.rembourser(`pay_${cmd.id}`, montantARembourser, motif);
+      }
+
+      return {
+        ...cmd,
+        sousCommandes: nouvellesSousCommandes,
+        statutGlobal,
+      };
+    });
+
+    this.notify();
+  }
+
+  public confirmerReceptionAcheteur(commandeId: string, noteProduit?: number, commentaire?: string) {
+    this.commandesGlobales = this.commandesGlobales.map((cmd) => {
+      if (cmd.id !== commandeId) return cmd;
+
+      // Validate release through Orchestrator rules
+      const validation = orchestrateur.validerAutorisationDeblocage({
+        statutCommande: 'livree',
+        preuveValide: true,
+        estEnLitige: false,
+      });
+
+      if (validation.autorise) {
+        apiUniquePaiement.validerPreuvesEtDebloquer({
+          commandeId: cmd.id,
+          referenceTransaction: `pay_${cmd.id}`,
+          preuveValide: true,
+        });
+      }
+
+      return {
+        ...cmd,
+        statutGlobal: 'LIVREE' as const,
+        sousCommandes: cmd.sousCommandes.map((s) => ({ ...s, statut: 'LIVREE' as const })),
+        confirmationAcheteur: {
+          date: new Date().toISOString(),
+          noteProduit,
+          commentaire,
+        },
+      };
+    });
+
+    this.notify();
   }
 
   public mettreAJourStatutSousCommande(

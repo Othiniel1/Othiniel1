@@ -27,7 +27,8 @@
     "annuler": "Annuler",
     "valider": "Valider",
     "confirmer": "Confirmer",
-    "en_savoir_plus": "En savoir plus"
+    "en_savoir_plus": "En savoir plus",
+    "reinitialiser_demo": "Réinitialiser Démo"
   },
   "acheteur": {
     "titre": "Espace Découverte & Achats",
@@ -35,20 +36,24 @@
     "onglets": {
       "catalogue": "Catalogue",
       "panier": "Panier",
-      "commandes": "Suivi Commandes"
+      "commandes": "Suivi Commandes",
+      "historique": "Historique"
     },
     "panier_vide": "Votre panier est vide",
     "panier_decompo": "Décomposition Multi-Vendeurs (Paiement Unique SOKU)",
     "point_soku_config": "Point SOKU de Livraison Configuré",
-    "changer_point": "Changer / Configurer"
+    "changer_point": "Changer / Configurer",
+    "rupture_stock": "Produit en rupture de stock"
   },
   "vendeur": {
-    "titre": "Gestion Commerciale & Préparation",
-    "soustitre": "Gérez vos sous-commandes reçues, mettez à jour la préparation et suivez vos performances.",
+    "titre": "Gestion Commerciale & Stocks",
+    "soustitre": "Gérez vos sous-commandes reçues, mettez à jour vos stocks/prix et suivez vos performances.",
     "ajouter_produit": "Ajouter Produit",
     "sous_commandes": "Sous-Commandes à Traiter",
     "passer_prete": "Marquer comme Prête",
-    "remettre_livreur": "Remettre au Livreur"
+    "remettre_livreur": "Remettre au Livreur",
+    "ca_encaisse": "Chiffre d'Affaires Encaissé (Séquestre Libéré)",
+    "editer_stock_prix": "Éditer Stock / Prix"
   },
   "livreur": {
     "titre": "Espace Exécution & Tournées",
@@ -58,7 +63,8 @@
     "missions_proposees": "Missions Proposées",
     "accepter": "Accepter la Mission",
     "decliner": "Décliner",
-    "valider_livraison": "Valider Livraison Effectuée"
+    "valider_livraison": "Valider Livraison Effectuée",
+    "total_gains_simules": "Total des Gains Simulés (Missions Effectuées)"
   },
   "paiement": {
     "titre": "Paiement Unique & Séquestre Non-Custodial",
