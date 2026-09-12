@@ -1,55 +1,55 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { sokuMockStore, CommandeGlobaleSOKU, SousCommandeVendeur } from '@/lib/mock-store';
-import { MockProduit } from '@/lib/mock-data';
 import { contratMoteurVendeur } from '@/lib/algorithmes/vendeur';
-import { EcosystemNav } from '@/components/ui/ecosystem-nav';
 import { EmptyState, SuccessBanner } from '@/components/ui/state-cards';
 import {
   Store,
   Package,
-  ShoppingBag,
+  CheckCircle,
   Plus,
-  CheckCircle2,
   TrendingUp,
-  AlertCircle,
-  Zap,
-  Clock,
-  ArrowRight,
-  Check,
-  CheckCheck,
-  Filter,
+  Lock,
+  Sparkles,
+  BarChart3,
 } from 'lucide-react';
 
 export default function VendeurPage() {
-  const [produits, setProduits] = useState<MockProduit[]>([]);
   const [commandesGlobales, setCommandesGlobales] = useState<CommandeGlobaleSOKU[]>([]);
-
-  const [nouveauNom, setNouveauNom] = useState('');
-  const [nouveauPrix, setNouveauPrix] = useState('');
-  const [nouvelleCategorie, setNouvelleCategorie] = useState('Alimentation');
-  const [nouveauStock, setNouveauStock] = useState('10');
-
-  const [filtreStatutSub, setFiltreStatutSub] = useState<string>('TOUS');
+  const [niveauAccesInsight, setNiveauAccesInsight] = useState<'STANDARD' | 'AVANCE'>('STANDARD');
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Algorithmic Consultative State (5 Blocks)
-  const [rapportAlgo, setRapportAlgo] = useState<{
-    donnees: Record<string, unknown>;
-    analyse: string;
+  // New Product Modal State
+  const [modalNouveauProduit, setModalNouveauProduit] = useState(false);
+  const [nomNouveau, setNomNouveau] = useState('');
+  const [prixNouveau, setPrixNouveau] = useState('');
+  const [categorieNouvelle, setCategorieNouvelle] = useState('Alimentation');
+  const [variationsNouvelles, setVariationsNouvelles] = useState('');
+
+  // Background Insight Performance Cards (Native UX Features)
+  const [performancesCommerciales, setPerformancesCommerciales] = useState<{
     constat: string;
     explication: string;
     recommandation: string;
-    decisionUtilisateur: 'EN_ATTENTE' | 'ACCEPTEE' | 'REFUSEE';
   } | null>(null);
 
   useEffect(() => {
-    setProduits(sokuMockStore.getProduits());
     setCommandesGlobales(sokuMockStore.getCommandesGlobales());
 
+    // Execute background analysis quiet call
+    contratMoteurVendeur.analyser('vendeur_001', {
+      boutiqueId: 'vendeur_001',
+      periodeJours: 7,
+    }).then((res) => {
+      setPerformancesCommerciales({
+        constat: res.constat,
+        explication: res.explication,
+        recommandation: res.recommandation,
+      });
+    });
+
     const unsubscribe = sokuMockStore.subscribe(() => {
-      setProduits(sokuMockStore.getProduits());
       setCommandesGlobales(sokuMockStore.getCommandesGlobales());
     });
     return () => {
@@ -57,102 +57,82 @@ export default function VendeurPage() {
     };
   }, []);
 
-  const ajouterProduit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nouveauNom || !nouveauPrix) return;
-
-    sokuMockStore.ajouterProduit({
-      nom: nouveauNom,
-      boutiqueNom: 'Délices de Cocody',
-      prix: Number(nouveauPrix),
-      categorie: nouvelleCategorie,
-      description: 'Produit ajouté depuis le tableau de bord vendeur SOKU.',
-      stock: Number(nouveauStock),
-      imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
-      note: 5.0,
-      nombreAvis: 1,
-      nombreVentes: 0,
-      badge: 'NOUVEAU',
+  // Filter sub-orders relevant to Vendeur "vendeur_001" (Délices de Cocody)
+  const mesSousCommandes = useMemo(() => {
+    const list: { cmdId: string; sub: SousCommandeVendeur }[] = [];
+    commandesGlobales.forEach((cmd) => {
+      cmd.sousCommandes.forEach((sub) => {
+        if (sub.vendeurId === 'vendeur_001' || sub.boutiqueNom.includes('Cocody')) {
+          list.push({ cmdId: cmd.id, sub });
+        }
+      });
     });
+    return list;
+  }, [commandesGlobales]);
 
-    setNotification(`Produit "${nouveauNom}" ajouté au catalogue avec un stock de ${nouveauStock} u.`);
-    setNouveauNom('');
-    setNouveauPrix('');
-  };
+  const faireAvancerStatut = (commandeId: string, sousCommandeId: string, statutActuel: SousCommandeVendeur['statut']) => {
+    let nouveauStatut: SousCommandeVendeur['statut'] = 'EN_PREPARATION';
+    if (statutActuel === 'EN_ATTENTE') nouveauStatut = 'EN_PREPARATION';
+    else if (statutActuel === 'EN_PREPARATION') nouveauStatut = 'PRETE';
+    else if (statutActuel === 'PRETE') nouveauStatut = 'REMISE_AU_LIVREUR';
 
-  const changerStatutSousCommande = (
-    commandeId: string,
-    sousCommandeId: string,
-    nouveauStatut: SousCommandeVendeur['statut']
-  ) => {
     sokuMockStore.mettreAJourStatutSousCommande(commandeId, sousCommandeId, nouveauStatut);
 
     if (nouveauStatut === 'PRETE') {
-      setNotification(`Sous-commande #${sousCommandeId} marquée "Prête pour collecte". La mission SOKU Livreur est maintenant disponible.`);
-    } else if (nouveauStatut === 'REMISE_AU_LIVREUR') {
-      setNotification(`Colis transmis au Livreur pour la sous-commande #${sousCommandeId}.`);
+      setNotification(`Sous-commande #${sousCommandeId} marquée "Prête pour collecte". La mission SOKU Livreur est disponible.`);
     } else {
-      setNotification(`Statut sous-commande mis à jour : ${nouveauStatut.replace(/_/g, ' ')}`);
+      setNotification(`Statut mis à jour : ${nouveauStatut.replace(/_/g, ' ')}`);
     }
   };
 
-  const declencherAnalyseAlgo = async () => {
-    const res = await contratMoteurVendeur.analyser('vendeur_001', {
-      boutiqueId: 'boutique_001',
-      periodeJours: 30,
+  const creerNouveauProduit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nomNouveau || !prixNouveau) return;
+
+    const varsArray = variationsNouvelles ? variationsNouvelles.split(',').map((v) => v.trim()) : undefined;
+
+    sokuMockStore.ajouterProduit({
+      nom: nomNouveau,
+      prix: parseInt(prixNouveau, 10),
+      boutiqueNom: 'Délices de Cocody',
+      categorie: categorieNouvelle,
+      imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80',
+      badge: 'NOUVEAU',
+      note: 5.0,
+      nombreAvis: 1,
+      nombreVentes: 0,
+      stock: 25,
+      variations: varsArray,
+      description: 'Nouveau produit ajouté par le vendeur Délices de Cocody.',
     });
-    setRapportAlgo({
-      donnees: res.donneesAnalysées as unknown as Record<string, unknown>,
-      analyse: 'Analyse prédictive de la vitesse de rotation des stocks et des paniers moyens.',
-      constat: res.constat,
-      explication: res.explication,
-      recommandation: res.recommandation,
-      decisionUtilisateur: 'EN_ATTENTE',
-    });
+
+    setNomNouveau('');
+    setPrixNouveau('');
+    setVariationsNouvelles('');
+    setModalNouveauProduit(false);
+    setNotification(`Le produit "${nomNouveau}" a été ajouté au catalogue avec succès.`);
   };
-
-  const traiterDecisionAlgo = (decision: 'ACCEPTEE' | 'REFUSEE') => {
-    if (rapportAlgo) {
-      setRapportAlgo({ ...rapportAlgo, decisionUtilisateur: decision });
-    }
-  };
-
-  // Collect sub-orders
-  const sousCommandesMoi = commandesGlobales.flatMap((cmd) =>
-    cmd.sousCommandes.map((sub) => ({ cmdId: cmd.id, sub, date: cmd.dateCreation }))
-  );
-
-  const sousCommandesFiltrees = sousCommandesMoi.filter(({ sub }) => {
-    if (filtreStatutSub === 'TOUS') return true;
-    return sub.statut === filtreStatutSub;
-  });
-
-  const chiffreAffairesBrut = sousCommandesMoi.reduce((acc, { sub }) => acc + sub.montantSousTotal, 0);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Global Ecosystem Navbar */}
-      <EcosystemNav />
-
       <main className="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6 flex-grow pb-24 sm:pb-12">
-        {/* Vendor Header Banner */}
-        <div className="bg-slate-900 text-white p-5 sm:p-6 rounded-2xl shadow-lg border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Vendor Standalone App Header */}
+        <div className="bg-slate-900 text-white p-5 sm:p-6 rounded-2xl shadow-lg border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
-              <Store className="w-4 h-4" /> Application SOKU Vendeur
+              <Store className="w-4 h-4" /> SOKU Vendeur — Boutique Délices de Cocody
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Espace Gestion Boutique</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Gestion Commerciale & Préparation</h1>
             <p className="text-slate-400 text-xs sm:text-sm mt-1">
-              Gérez vos stocks, préparez vos sous-commandes et remettez vos colis aux livreurs SOKU.
+              Gérez vos sous-commandes reçues, mettez à jour la préparation et suivez vos performances.
             </p>
           </div>
 
           <button
-            onClick={declencherAnalyseAlgo}
+            onClick={() => setModalNouveauProduit(true)}
             className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shrink-0"
           >
-            <Zap className="w-4 h-4 fill-slate-950" />
-            Analyse Algorithmique Vendeur
+            <Plus className="w-4 h-4" /> Ajouter Produit
           </button>
         </div>
 
@@ -165,305 +145,250 @@ export default function VendeurPage() {
           />
         )}
 
-        {/* Consultative Algorithmic Banner (5 Blocks) */}
-        {rapportAlgo && (
-          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-4 shadow-sm">
+        {/* Access Tier Insight Header Card (Accumulated background insight concept) */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="bg-amber-100 p-2.5 rounded-xl border border-amber-200 text-amber-900">
+              <BarChart3 className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900">Restitution des Performances Commerciales</p>
+              <p className="text-[11px] text-slate-500">
+                Niveau d&apos;analyse débloqué selon l&apos;activité de la boutique.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+            <button
+              onClick={() => setNiveauAccesInsight('STANDARD')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                niveauAccesInsight === 'STANDARD'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Niveau Standard
+            </button>
+            <button
+              onClick={() => setNiveauAccesInsight('AVANCE')}
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${
+                niveauAccesInsight === 'AVANCE'
+                  ? 'bg-amber-500 text-slate-950 shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Niveau Avancé
+            </button>
+          </div>
+        </div>
+
+        {/* Native Performance Insight Banner */}
+        {performancesCommerciales && (
+          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-3 shadow-xs">
             <div className="flex items-center justify-between border-b border-amber-200 pb-2">
-              <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
-                <Zap className="w-5 h-5 text-amber-600 shrink-0" />
-                <span>Analyse Consultative — Moteur Algorithmique Vendeur</span>
+              <div className="flex items-center gap-2 text-amber-950 font-bold text-xs sm:text-sm">
+                <TrendingUp className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Performance Commerciale & Stock Boutique</span>
               </div>
-              <span className="text-[11px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold uppercase">
-                Mode Avis Conseil
+              <span className="text-[10px] bg-amber-200 text-amber-950 px-2 py-0.5 rounded font-bold uppercase">
+                Vue {niveauAccesInsight}
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
-                <p className="font-extrabold text-amber-900 mb-1">1. DONNÉES</p>
-                <p className="text-slate-700">{JSON.stringify(rapportAlgo.donnees)}</p>
+                <p className="font-extrabold text-amber-950 mb-1 flex items-center gap-1">
+                  <Package className="w-3.5 h-3.5 text-amber-600" /> Constat Stock & Préparation
+                </p>
+                <p className="text-slate-700">{performancesCommerciales.constat}</p>
               </div>
+
               <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
-                <p className="font-extrabold text-amber-900 mb-1">2. ANALYSE</p>
-                <p className="text-slate-700">{rapportAlgo.analyse}</p>
-              </div>
-              <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
-                <p className="font-extrabold text-amber-900 mb-1">3. CONSTAT</p>
-                <p className="text-slate-700">{rapportAlgo.constat}</p>
-              </div>
-              <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
-                <p className="font-extrabold text-amber-900 mb-1">4. EXPLICATION</p>
-                <p className="text-slate-700">{rapportAlgo.explication}</p>
-              </div>
-              <div className="bg-amber-100/90 p-3 rounded-xl border border-amber-300">
-                <p className="font-extrabold text-amber-950 mb-1">5. RECOMMANDATION</p>
-                <p className="text-amber-950 font-medium">{rapportAlgo.recommandation}</p>
+                <p className="font-extrabold text-amber-950 mb-1 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Recommandation de Réapprovisionnement
+                </p>
+                <p className="text-slate-700">{performancesCommerciales.recommandation}</p>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-amber-200 flex items-center justify-between flex-wrap gap-2">
-              <p className="text-[11px] text-amber-800 italic">
-                * L&apos;algorithme ne réapprovisionne aucun produit de façon autonome.
-              </p>
-              {rapportAlgo.decisionUtilisateur === 'EN_ATTENTE' ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => traiterDecisionAlgo('ACCEPTEE')}
-                    className="bg-slate-900 text-white font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-slate-800 flex items-center gap-1 shadow-xs"
-                  >
-                    <Check className="w-3.5 h-3.5 text-amber-400" /> Accepter Recommandation
-                  </button>
-                  <button
-                    onClick={() => traiterDecisionAlgo('REFUSEE')}
-                    className="bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-slate-300"
-                  >
-                    Décliner
-                  </button>
-                </div>
-              ) : (
-                <span className={`text-xs font-bold px-3 py-1 rounded-xl ${
-                  rapportAlgo.decisionUtilisateur === 'ACCEPTEE' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'
-                }`}>
-                  Décision enregistrée : {rapportAlgo.decisionUtilisateur}
+            {niveauAccesInsight === 'AVANCE' ? (
+              <div className="bg-amber-100/90 p-3 rounded-xl border border-amber-300 text-xs text-amber-950 font-medium">
+                <p className="font-bold text-amber-950 mb-0.5">Analyse Approfondie des Tendances :</p>
+                <p>{performancesCommerciales.explication}</p>
+              </div>
+            ) : (
+              <div className="bg-white/60 p-2.5 rounded-xl border border-dashed border-amber-300 flex items-center justify-between text-xs text-amber-900">
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold">
+                  <Lock className="w-3.5 h-3.5 text-amber-600" /> Détails d&apos;analyse approfondie verrouillés
                 </span>
-              )}
-            </div>
+                <button
+                  onClick={() => setNiveauAccesInsight('AVANCE')}
+                  className="text-amber-800 underline font-bold text-[11px] hover:text-amber-950"
+                >
+                  Activer la vue avancée
+                </button>
+              </div>
+            )}
           </div>
         )}
 
-        {/* KPI Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-            <p className="text-xs font-semibold text-slate-500">Chiffre d&apos;Affaires Brut (Mock)</p>
-            <p className="text-2xl font-black text-slate-900">{chiffreAffairesBrut.toLocaleString()} FCFA</p>
-            <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-              <TrendingUp className="w-3.5 h-3.5" /> +15% cette semaine
-            </p>
-          </div>
+        {/* Sub-Orders List for Vendeur */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+            <Package className="w-5 h-5 text-amber-500" />
+            Sous-Commandes à Traiter ({mesSousCommandes.length})
+          </h2>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-            <p className="text-xs font-semibold text-slate-500">Sous-Commandes à Traiter</p>
-            <p className="text-2xl font-black text-amber-600">
-              {sousCommandesMoi.filter(({ sub }) => sub.statut === 'EN_ATTENTE' || sub.statut === 'EN_PREPARATION').length}
-            </p>
-            <p className="text-[11px] text-slate-500">Flux de préparation actif</p>
-          </div>
+          {mesSousCommandes.length === 0 ? (
+            <EmptyState
+              title="Aucune commande reçue"
+              description="Les sous-commandes passées par les acheteurs auprès de votre boutique s'afficheront ici en temps réel."
+              icon={Package}
+            />
+          ) : (
+            <div className="space-y-4">
+              {mesSousCommandes.map(({ cmdId, sub }) => (
+                <div key={sub.id} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3.5 text-xs">
+                  <div className="flex justify-between items-center border-b border-slate-200 pb-2.5">
+                    <div>
+                      <span className="font-extrabold text-slate-900 text-sm">
+                        Sous-Commande #{sub.id} (Rattachée à #{cmdId})
+                      </span>
+                      <span className="text-[10px] text-slate-500 block">Boutique : {sub.boutiqueNom}</span>
+                    </div>
+                    <span className="bg-amber-100 text-amber-900 px-2.5 py-1 rounded-lg font-bold text-[11px] uppercase">
+                      {sub.statut.replace(/_/g, ' ')}
+                    </span>
+                  </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-            <p className="text-xs font-semibold text-slate-500">Articles en Catalogue</p>
-            <p className="text-2xl font-black text-slate-900">{produits.length}</p>
-            <p className="text-[11px] text-slate-500">Total : {produits.reduce((acc, p) => acc + p.stock, 0)} unités</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Sub-Orders Processing */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                  <ShoppingBag className="w-5 h-5 text-amber-500" />
-                  Sous-Commandes Vendeur ({sousCommandesFiltrees.length})
-                </h2>
-
-                {/* Sub-Orders Status Filter Buttons */}
-                <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 text-xs">
-                  <Filter className="w-3.5 h-3.5 text-slate-400 mr-1 shrink-0" />
-                  {['TOUS', 'EN_ATTENTE', 'EN_PREPARATION', 'PRETE', 'REMISE_AU_LIVREUR'].map((st) => (
-                    <button
-                      key={st}
-                      onClick={() => setFiltreStatutSub(st)}
-                      className={`px-2.5 py-1 rounded-lg font-semibold whitespace-nowrap transition-all text-[11px] ${
-                        filtreStatutSub === st
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {st === 'TOUS' ? 'Toutes' : st.replace(/_/g, ' ')}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {sousCommandesFiltrees.length === 0 ? (
-                <EmptyState
-                  title="Aucune sous-commande dans ce statut"
-                  description="Les commandes des acheteurs regroupant vos produits apparaîtront ici."
-                  icon={ShoppingBag}
-                />
-              ) : (
-                <div className="space-y-3">
-                  {sousCommandesFiltrees.map(({ cmdId, sub }) => (
-                    <div key={sub.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                        <div>
-                          <span className="font-extrabold text-xs text-slate-900 mr-2">
-                            Commande globale #{cmdId}
+                  {/* Articles List */}
+                  <div className="space-y-2">
+                    <p className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">Articles commandés :</p>
+                    <div className="space-y-1.5">
+                      {sub.articles.map((item, idx) => (
+                        <div key={idx} className="bg-white p-2.5 rounded-xl border border-slate-200 flex justify-between items-center">
+                          <span className="font-bold text-slate-900">
+                            {item.quantite}x {item.produit.nom}
                           </span>
-                          <span className="text-xs text-slate-500 font-mono">
-                            ID Sub: {sub.id} ({sub.boutiqueNom})
+                          <span className="font-semibold text-amber-600">
+                            {(item.prixUnitaire * item.quantite).toLocaleString()} FCFA
                           </span>
                         </div>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 uppercase tracking-wide">
-                          {sub.statut.replace(/_/g, ' ')}
-                        </span>
-                      </div>
-
-                      <div className="text-xs text-slate-700 space-y-1">
-                        <p className="font-bold">Articles commandés :</p>
-                        <ul className="list-disc list-inside space-y-0.5 text-slate-600 pl-1">
-                          {sub.articles.map((art, idx) => (
-                            <li key={idx}>
-                              <span className="font-bold text-slate-900">{art.quantite}x</span> {art.produit.nom} ({art.prixUnitaire.toLocaleString()} FCFA/u)
-                            </li>
-                          ))}
-                        </ul>
-                        <p className="font-extrabold text-slate-900 pt-1 border-t border-slate-200/60 mt-1">
-                          Sous-total sous-commande : {sub.montantSousTotal.toLocaleString()} FCFA
-                        </p>
-                      </div>
-
-                      {/* Lifecycle Control Buttons */}
-                      <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200">
-                        {sub.statut === 'EN_ATTENTE' && (
-                          <button
-                            onClick={() => changerStatutSousCommande(cmdId, sub.id, 'EN_PREPARATION')}
-                            className="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-xs"
-                          >
-                            <Clock className="w-3.5 h-3.5" /> Accepter & Lancer Préparation
-                          </button>
-                        )}
-
-                        {sub.statut === 'EN_PREPARATION' && (
-                          <button
-                            onClick={() => changerStatutSousCommande(cmdId, sub.id, 'PRETE')}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-xs"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Marquer Prête (Prêt pour Collecte Livreur)
-                          </button>
-                        )}
-
-                        {sub.statut === 'PRETE' && (
-                          <button
-                            onClick={() => changerStatutSousCommande(cmdId, sub.id, 'REMISE_AU_LIVREUR')}
-                            className="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-xs"
-                          >
-                            <ArrowRight className="w-3.5 h-3.5 text-amber-400" /> Confirmer Remise au Livreur SOKU
-                          </button>
-                        )}
-
-                        {sub.statut === 'REMISE_AU_LIVREUR' && (
-                          <span className="text-xs text-slate-500 font-bold flex items-center gap-1">
-                            <CheckCheck className="w-4 h-4 text-emerald-600" /> Colis remis au Livreur — En transit
-                          </span>
-                        )}
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Catalog Management List */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                <Package className="w-5 h-5 text-amber-500" />
-                Catalogue Produits en Boutique
-              </h2>
-
-              <div className="divide-y divide-slate-100">
-                {produits.map((p) => (
-                  <div key={p.id} className="py-3 flex items-center justify-between text-xs">
-                    <div>
-                      <p className="font-bold text-slate-900">{p.nom}</p>
-                      <p className="text-slate-500">{p.boutiqueNom} • {p.categorie} — Stock : <span className="font-bold text-slate-700">{p.stock} u</span></p>
-                    </div>
-                    <span className="font-extrabold text-slate-900 text-sm">{p.prix.toLocaleString()} FCFA</span>
                   </div>
-                ))}
-              </div>
+
+                  {/* Status Advancement Action */}
+                  <div className="pt-2 border-t border-slate-200 flex justify-between items-center flex-wrap gap-2">
+                    <span className="text-[11px] font-extrabold text-slate-900">
+                      Montant Sous-Total : {sub.montantSousTotal.toLocaleString()} FCFA
+                    </span>
+
+                    {sub.statut !== 'REMISE_AU_LIVREUR' && sub.statut !== 'LIVREE' && (
+                      <button
+                        onClick={() => faireAvancerStatut(cmdId, sub.id, sub.statut)}
+                        className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5 text-amber-400" />
+                        {sub.statut === 'EN_ATTENTE' && 'Démarrer Préparation'}
+                        {sub.statut === 'EN_PREPARATION' && 'Marquer comme Prête'}
+                        {sub.statut === 'PRETE' && 'Remettre au Livreur'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-
-          {/* Right Column: Add Product Form */}
-          <div className="space-y-6">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                <Plus className="w-5 h-5 text-amber-500" />
-                Nouveau Produit SOKU
-              </h2>
-
-              <form onSubmit={ajouterProduit} className="space-y-3 text-xs">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Nom du produit</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Piment Sento Frais (Sachet)"
-                    value={nouveauNom}
-                    onChange={(e) => setNouveauNom(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Prix (FCFA)</label>
-                  <input
-                    type="number"
-                    placeholder="Ex: 1500"
-                    value={nouveauPrix}
-                    onChange={(e) => setNouveauPrix(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Catégorie</label>
-                  <select
-                    value={nouvelleCategorie}
-                    onChange={(e) => setNouvelleCategorie(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  >
-                    <option value="Alimentation">Alimentation</option>
-                    <option value="Épicerie">Épicerie</option>
-                    <option value="Textile">Textile</option>
-                    <option value="Cosmétique">Cosmétique</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Stock initial</label>
-                  <input
-                    type="number"
-                    value={nouveauStock}
-                    onChange={(e) => setNouveauStock(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-xs"
-                >
-                  <Plus className="w-4 h-4 text-amber-400" /> Publier le Produit
-                </button>
-              </form>
-            </div>
-
-            <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl text-xs space-y-2">
-              <p className="font-bold text-amber-900 flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                Conseil Vendeur SOKU
-              </p>
-              <p className="text-amber-800 leading-relaxed">
-                Marquez vos sous-commandes &quot;Prêtes&quot; le plus tôt possible pour permettre la mise à disposition instantanée de la mission pour les livreurs partenaires.
-              </p>
-            </div>
-          </div>
+          )}
         </div>
       </main>
+
+      {/* New Product Modal */}
+      {modalNouveauProduit && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full space-y-4 shadow-xl border border-slate-200 p-6 relative">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                <Plus className="w-4 h-4 text-amber-500" /> Ajouter un nouveau produit
+              </h3>
+              <button
+                onClick={() => setModalNouveauProduit(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={creerNouveauProduit} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Nom du produit :</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ex: Attiéké Garba Frais (Sac 5kg)"
+                  value={nomNouveau}
+                  onChange={(e) => setNomNouveau(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Prix (FCFA) :</label>
+                <input
+                  type="number"
+                  required
+                  placeholder="ex: 2500"
+                  value={prixNouveau}
+                  onChange={(e) => setPrixNouveau(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Catégorie :</label>
+                <select
+                  value={categorieNouvelle}
+                  onChange={(e) => setCategorieNouvelle(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                >
+                  <option value="Alimentation">Alimentation</option>
+                  <option value="Épicerie">Épicerie</option>
+                  <option value="Textile">Textile</option>
+                  <option value="Cosmétique">Cosmétique</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Variations (séparées par des virgules) :</label>
+                <input
+                  type="text"
+                  placeholder="ex: Portion Indiv, Sac 5kg, Format Familial"
+                  value={variationsNouvelles}
+                  onChange={(e) => setVariationsNouvelles(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setModalNouveauProduit(false)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-bold shadow-xs"
+                >
+                  Créer et publier
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

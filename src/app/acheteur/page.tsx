@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { sokuMockStore, CommandeGlobaleSOKU } from '@/lib/mock-store';
 import { MOCK_POINT_SOKU, MockProduit, MockPointSOKU } from '@/lib/mock-data';
 import { contratMoteurAcheteur } from '@/lib/algorithmes/acheteur';
-import { EcosystemNav } from '@/components/ui/ecosystem-nav';
 import { PointSokuModal } from '@/components/ui/point-soku-modal';
 import { ContactModal } from '@/components/ui/contact-modal';
 import { EmptyState, SuccessBanner } from '@/components/ui/state-cards';
@@ -15,7 +14,6 @@ import {
   MapPin,
   Truck,
   Store,
-  Zap,
   Phone,
   CheckCircle,
   Plus,
@@ -26,6 +24,7 @@ import {
   Star,
   ShoppingBasket,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 
 export default function AcheteurPage() {
@@ -54,19 +53,28 @@ export default function AcheteurPage() {
   // Feedback Success Notification
   const [notificationSucces, setNotificationSucces] = useState<string | null>(null);
 
-  // Algorithmic Consultative State (5 Blocks)
-  const [rapportAlgo, setRapportAlgo] = useState<{
-    donnees: Record<string, unknown>;
-    analyse: string;
+  // Background Insight Recommendations (Native Feature)
+  const [recommandationProximite, setRecommandationProximite] = useState<{
     constat: string;
     explication: string;
     recommandation: string;
-    decisionUtilisateur: 'EN_ATTENTE' | 'ACCEPTEE' | 'REFUSEE';
   } | null>(null);
 
   useEffect(() => {
     setProduits(sokuMockStore.getProduits());
     setCommandes(sokuMockStore.getCommandesGlobales());
+
+    // Execute background analysis quietly to build personalized recommendations
+    contratMoteurAcheteur.analyser('acheteur_001', {
+      categoriesPreferees: ['Alimentation', 'Épicerie'],
+      localisationActuelle: { latitude: 5.3599, longitude: -4.0083 },
+    }).then((res) => {
+      setRecommandationProximite({
+        constat: res.constat,
+        explication: res.explication,
+        recommandation: res.recommandation,
+      });
+    });
 
     const unsubscribe = sokuMockStore.subscribe(() => {
       setProduits(sokuMockStore.getProduits());
@@ -110,27 +118,6 @@ export default function AcheteurPage() {
     setPanier((prev) => prev.filter((item) => item.produit.id !== id));
   };
 
-  const declencherAnalyseAlgo = async () => {
-    const res = await contratMoteurAcheteur.analyser('acheteur_001', {
-      categoriesPreferees: ['Alimentation', 'Épicerie'],
-      localisationActuelle: { latitude: 5.3599, longitude: -4.0083 },
-    });
-    setRapportAlgo({
-      donnees: res.donneesAnalysées as unknown as Record<string, unknown>,
-      analyse: 'Traitement des habitudes d\'achat locales et de la proximité géographique des boutiques.',
-      constat: res.constat,
-      explication: res.explication,
-      recommandation: res.recommandation,
-      decisionUtilisateur: 'EN_ATTENTE',
-    });
-  };
-
-  const traiterDecisionAlgo = (decision: 'ACCEPTEE' | 'REFUSEE') => {
-    if (rapportAlgo) {
-      setRapportAlgo({ ...rapportAlgo, decisionUtilisateur: decision });
-    }
-  };
-
   const validerCommande = () => {
     if (panier.length === 0) return;
     const frais = modeLivraison === 'livreur_soku' ? 1000 : modeLivraison === 'vendeur_lui_meme' ? 800 : 0;
@@ -172,29 +159,18 @@ export default function AcheteurPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Global Ecosystem Navbar */}
-      <EcosystemNav />
-
       <main className="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6 flex-grow pb-24 sm:pb-12">
-        {/* Buyer Role Sub-Header */}
-        <div className="bg-slate-900 text-white p-5 sm:p-6 rounded-2xl shadow-lg border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Buyer Standalone App Header */}
+        <div className="bg-slate-900 text-white p-5 sm:p-6 rounded-2xl shadow-lg border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
-              <ShoppingBag className="w-4 h-4" /> Application SOKU Acheteur
+              <ShoppingBag className="w-4 h-4" /> SOKU Acheteur
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Espace Découverte & Achats</h1>
             <p className="text-slate-400 text-xs sm:text-sm mt-1">
               Parcourez le catalogue local, organisez votre panier multi-vendeurs et suivez vos livraisons SOKU.
             </p>
           </div>
-
-          <button
-            onClick={declencherAnalyseAlgo}
-            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shrink-0"
-          >
-            <Zap className="w-4 h-4 fill-slate-950" />
-            Analyse Algorithmique Acheteur
-          </button>
         </div>
 
         {/* Global Notification Banner */}
@@ -206,69 +182,16 @@ export default function AcheteurPage() {
           />
         )}
 
-        {/* Consultative Algorithmic Banner (5 Structured Blocks) */}
-        {rapportAlgo && (
-          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-amber-200 pb-2">
-              <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
-                <Zap className="w-5 h-5 text-amber-600 shrink-0" />
-                <span>Analyse Consultative — Moteur Algorithmique Acheteur</span>
-              </div>
-              <span className="text-[11px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold uppercase">
-                Mode Avis Conseil
-              </span>
+        {/* Native Insight Recommendation Banner */}
+        {recommandationProximite && (
+          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 space-y-2 shadow-xs">
+            <div className="flex items-center gap-2 text-amber-950 font-bold text-xs sm:text-sm">
+              <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Suggéré pour vous à proximité :</span>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
-              <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
-                <p className="font-extrabold text-amber-900 mb-1">1. DONNÉES</p>
-                <p className="text-slate-700">{JSON.stringify(rapportAlgo.donnees)}</p>
-              </div>
-              <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
-                <p className="font-extrabold text-amber-900 mb-1">2. ANALYSE</p>
-                <p className="text-slate-700">{rapportAlgo.analyse}</p>
-              </div>
-              <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
-                <p className="font-extrabold text-amber-900 mb-1">3. CONSTAT</p>
-                <p className="text-slate-700">{rapportAlgo.constat}</p>
-              </div>
-              <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
-                <p className="font-extrabold text-amber-900 mb-1">4. EXPLICATION</p>
-                <p className="text-slate-700">{rapportAlgo.explication}</p>
-              </div>
-              <div className="bg-amber-100/90 p-3 rounded-xl border border-amber-300">
-                <p className="font-extrabold text-amber-950 mb-1">5. RECOMMANDATION</p>
-                <p className="text-amber-950 font-medium">{rapportAlgo.recommandation}</p>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-amber-200 flex items-center justify-between flex-wrap gap-2">
-              <p className="text-[11px] text-amber-800 italic">
-                * L&apos;algorithme conseille mais n&apos;effectue aucun achat automatique.
-              </p>
-              {rapportAlgo.decisionUtilisateur === 'EN_ATTENTE' ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => traiterDecisionAlgo('ACCEPTEE')}
-                    className="bg-slate-900 text-white font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-slate-800 flex items-center gap-1 shadow-xs"
-                  >
-                    <Check className="w-3.5 h-3.5 text-amber-400" /> Accepter Recommandation
-                  </button>
-                  <button
-                    onClick={() => traiterDecisionAlgo('REFUSEE')}
-                    className="bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-slate-300"
-                  >
-                    Décliner
-                  </button>
-                </div>
-              ) : (
-                <span className={`text-xs font-bold px-3 py-1 rounded-xl ${
-                  rapportAlgo.decisionUtilisateur === 'ACCEPTEE' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'
-                }`}>
-                  Décision enregistrée : {rapportAlgo.decisionUtilisateur}
-                </span>
-              )}
-            </div>
+            <p className="text-xs text-amber-900 leading-relaxed font-medium">
+              {recommandationProximite.recommandation} ({recommandationProximite.explication})
+            </p>
           </div>
         )}
 
