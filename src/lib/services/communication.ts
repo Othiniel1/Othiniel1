@@ -242,9 +242,12 @@ class OfflineSyncManager implements ISynchronisationOfflineService {
         if (action.typeAction === 'CHANGEMENT_STATUT_LIVRAISON') {
           const { livraisonRepository } = await import('./index');
           const p = action.payload as { id: string; statut: 'PROPOSEE' | 'EN_COURS' | 'TERMINEE' | 'REFUSEE' };
-          if (p?.id && p?.statut) {
-            await livraisonRepository.mettreAJourStatutMission(p.id, p.statut);
+          const missions = await livraisonRepository.listerMissions();
+          const target = missions.find((m) => m.id === p?.id);
+          if (!target) {
+            throw new Error(`Mission #${p?.id} non trouvée lors du rejeu.`);
           }
+          await livraisonRepository.mettreAJourStatutMission(p.id, p.statut);
         }
         action.statut = 'SYNCHRONISE';
         succes += 1;

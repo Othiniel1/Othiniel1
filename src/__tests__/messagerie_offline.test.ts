@@ -1,4 +1,5 @@
 import { messagerieService, notificationService, offlineSyncManager } from '../lib/services/communication';
+import { livraisonRepository } from '../lib/services';
 import { busEvenements } from '../lib/evenements/bus';
 
 describe('Services Messagerie, Notifications & Sync Offline SOKU', () => {
@@ -29,23 +30,51 @@ describe('Services Messagerie, Notifications & Sync Offline SOKU', () => {
     expect(notifs.some((n) => n.message.includes('CMD-NOTIF-001'))).toBe(true);
   });
 
-  it('doit enregistrer des actions hors-ligne, dédupliquer et synchroniser correctement', async () => {
+  it('doit enregistrer des actions hors-ligne, dédupliquer et répercuter réellement les modifications lors de la synchronisation', async () => {
     offlineSyncManager.setModeSimuleEnLigne(false);
 
-    const act1 = await offlineSyncManager.ajouterActionEnAttente('CHANGEMENT_STATUT_LIVRAISON', { id: 'm_001', statut: 'EN_COURS' });
-    const act2 = await offlineSyncManager.ajouterActionEnAttente('CHANGEMENT_STATUT_LIVRAISON', { id: 'm_001', statut: 'EN_COURS' });
+    const missionsBefore = await livraisonRepository.listerMissions();
+    const targetMission = missionsBefore[0];
 
-    expect(act1.id).toBe(act2.id); // Deduplication
+    // Queue action offline
+    const act1 = await offlineSyncManager.ajouterActionEnAttente('CHANGEMENT_STATUT_LIVRAISON', { id: targetMission.id, statut: 'EN_COURS' });
+    const act2 = await offlineSyncManager.ajouterActionEnAttente('CHANGEMENT_STATUT_LIVRAISON', { id: targetMission.id, statut: 'EN_COURS' });
+
+    // Deduplication check
+    expect(act1.id).toBe(act2.id);
 
     let pendings = await offlineSyncManager.listerActionsEnAttente();
     expect(pendings.filter((a) => a.statut === 'EN_ATTENTE').length).toBeGreaterThan(0);
 
-    // Turn online and sync
+    // Reconnect and sync
     offlineSyncManager.setModeSimuleEnLigne(true);
     const res = await offlineSyncManager.synchroniserActions();
     expect(res.succes).toBeGreaterThan(0);
 
+    // Verify status transition in queue
     pendings = await offlineSyncManager.listerActionsEnAttente();
-    expect(pendings.every((a) => a.statut === 'SYNCHRONISE')).toBe(true);
+    expect(pendings.find((a) => a.id === act1.id)?.statut).toBe('SYNCHRONISE');
+
+    // Verify real state mutation in repository
+    const missionsAfter = await livraisonRepository.listerMissions();
+    const updatedTarget = missionsAfter.find((m) => m.id === targetMission.id);
+    expect(updatedTarget?.statut).toBe('EN_COURS');
+  });
+
+  it('doit conserver l’action en statut ECHEC si le rejeu échoue sans la supprimer', async () => {
+    offlineSyncManager.setModeSimuleEnLigne(false);
+
+    // Add action with bad payload to trigger rejection
+    const invalidAction = await offlineSyncManager.ajouterActionEnAttente('CHANGEMENT_STATUT_LIVRAISON', { id: 'mission_inexistante_9999', statut: 'INVALID_STATUS' });
+
+    offlineSyncManager.setModeSimuleEnLigne(true);
+    const res = await offlineSyncManager.synchroniserActions();
+    expect(res.echecs).toBeGreaterThan(0);
+
+    const pendings = await offlineSyncManager.listerActionsEnAttente();
+    const failedAction = pendings.find((a) => a.id === invalidAction.id);
+    expect(failedAction?.statut).toBe('ECHEC');
+    expect(failedAction?.nbTentatives).toBeGreaterThan(0);
+    expect(failedAction?.erreurDerniereTentative).toBeDefined();
   });
 });
