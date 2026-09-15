@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { sokuMockStore, CommandeGlobaleSOKU, SousCommandeVendeur } from '@/lib/mock-store';
 import { MockProduit } from '@/lib/mock-data';
+import { authService, produitRepository, commandeRepository } from '@/lib/services';
 import { contratMoteurVendeur } from '@/lib/algorithmes/vendeur';
 import { EmptyState, SuccessBanner } from '@/components/ui/state-cards';
 import {
@@ -50,8 +51,9 @@ export default function VendeurPage() {
   } | null>(null);
 
   useEffect(() => {
-    setProduits(sokuMockStore.getProduits());
-    setCommandesGlobales(sokuMockStore.getCommandesGlobales());
+    authService.connexion('VENDEUR');
+    produitRepository.listerProduits().then(setProduits);
+    commandeRepository.listerCommandesGlobales().then(setCommandesGlobales);
 
     contratMoteurVendeur.analyser('vendeur_001', {
       boutiqueId: 'vendeur_001',
@@ -104,13 +106,13 @@ export default function VendeurPage() {
       .reduce((acc, s) => acc + s.sub.montantSousTotal, 0);
   }, [mesSousCommandes]);
 
-  const faireAvancerStatut = (commandeId: string, sousCommandeId: string, statutActuel: SousCommandeVendeur['statut']) => {
+  const faireAvancerStatut = async (commandeId: string, sousCommandeId: string, statutActuel: SousCommandeVendeur['statut']) => {
     let nouveauStatut: SousCommandeVendeur['statut'] = 'EN_PREPARATION';
     if (statutActuel === 'EN_ATTENTE') nouveauStatut = 'EN_PREPARATION';
     else if (statutActuel === 'EN_PREPARATION') nouveauStatut = 'PRETE';
     else if (statutActuel === 'PRETE') nouveauStatut = 'REMISE_AU_LIVREUR';
 
-    sokuMockStore.mettreAJourStatutSousCommande(commandeId, sousCommandeId, nouveauStatut);
+    await commandeRepository.mettreAJourStatutSousCommande(commandeId, sousCommandeId, nouveauStatut);
 
     if (nouveauStatut === 'PRETE') {
       setNotification(`Sous-commande #${sousCommandeId} marquée "Prête pour collecte". La mission SOKU Livreur est disponible.`);
@@ -119,37 +121,29 @@ export default function VendeurPage() {
     }
   };
 
-  const annulerSousCommandeParVendeur = (cmdId: string, subId: string) => {
+  const annulerSousCommandeParVendeur = async (cmdId: string, subId: string) => {
     const motif = 'Rupture de stock signalée par le Vendeur';
-    sokuMockStore.annulerSousCommande(cmdId, subId, motif);
+    await commandeRepository.annulerSousCommande(cmdId, subId, motif);
     setNotification(`Sous-commande #${subId} annulée. Remboursement simulé déclenché pour l'acheteur.`);
   };
 
-  const enregistrerMiseAJourProduit = (id: string) => {
-    sokuMockStore.modifierProduitVendeur(id, {
-      stock: nouveauStock,
-      prix: nouveauPrix,
-    });
+  const enregistrerMiseAJourProduit = async (id: string) => {
+    await produitRepository.mettreAJourStockEtPrix(id, nouveauStock, nouveauPrix);
     setProduitEnEdition(null);
     setNotification('Stock et prix mis à jour avec succès dans le catalogue.');
   };
 
-  const creerNouveauProduit = (e: React.FormEvent) => {
+  const creerNouveauProduit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nomNouveau || !prixNouveau) return;
 
     const varsArray = variationsNouvelles ? variationsNouvelles.split(',').map((v) => v.trim()) : undefined;
 
-    sokuMockStore.ajouterProduit({
+    await produitRepository.sauvegarderProduit({
       nom: nomNouveau,
       prix: parseInt(prixNouveau, 10),
       boutiqueNom: 'Délices de Cocody',
       categorie: categorieNouvelle,
-      imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80',
-      badge: 'NOUVEAU',
-      note: 5.0,
-      nombreAvis: 1,
-      nombreVentes: 0,
       stock: parseInt(stockNouveau, 10) || 10,
       variations: varsArray,
       description: 'Nouveau produit ajouté par le vendeur Délices de Cocody.',

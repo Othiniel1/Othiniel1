@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { sokuMockStore } from '@/lib/mock-store';
 import { MockMissionLivreur } from '@/lib/mock-data';
+import { authService, livraisonRepository } from '@/lib/services';
+import { offlineSyncManager } from '@/lib/services/communication';
+import { ActionOfflineSOKU } from '@/lib/services/communication-interfaces';
 import { contratMoteurLivreur } from '@/lib/algorithmes/livreur';
 import { ContactModal } from '@/components/ui/contact-modal';
 import { EmptyState, SuccessBanner } from '@/components/ui/state-cards';
@@ -27,6 +30,7 @@ export default function LivreurPage() {
   const [ongletActif, setOngletActif] = useState<'missions' | 'historique'>('missions');
   const [estDisponible, setEstDisponible] = useState<boolean>(true);
   const [notification, setNotification] = useState<string | null>(null);
+  const [actionsEnAttente, setActionsEnAttente] = useState<ActionOfflineSOKU[]>([]);
 
   // Contact Modal State
   const [modalContactData, setModalContactData] = useState<{
@@ -44,7 +48,9 @@ export default function LivreurPage() {
   } | null>(null);
 
   useEffect(() => {
-    setMissions(sokuMockStore.getMissionsLivreur());
+    authService.connexion('LIVREUR');
+    livraisonRepository.listerMissions().then(setMissions);
+    offlineSyncManager.listerActionsEnAttente().then(setActionsEnAttente);
 
     contratMoteurLivreur.analyser('livreur_001', {
       zoneActuelle: 'Cocody Vallon',
@@ -79,19 +85,43 @@ export default function LivreurPage() {
       .reduce((acc, m) => acc + m.remunerationProposeeFCFA, 0);
   }, [missions]);
 
-  const accepterMission = (id: string) => {
-    sokuMockStore.mettreAJourStatutMissionLivreur(id, 'EN_COURS');
+  const accepterMission = async (id: string) => {
+    if (!offlineSyncManager.estEnLigne()) {
+      await offlineSyncManager.ajouterActionEnAttente('CHANGEMENT_STATUT_LIVRAISON', { id, statut: 'EN_COURS' });
+      setActionsEnAttente(await offlineSyncManager.listerActionsEnAttente());
+      setNotification(`Action enregistrée Hors Ligne. Mission #${id} sera synchronisée.`);
+      return;
+    }
+    await livraisonRepository.mettreAJourStatutMission(id, 'EN_COURS');
     setNotification(`Mission #${id} acceptée. Suivez le trajet vers le Point de Collecte.`);
   };
 
-  const declinerMission = (id: string) => {
-    sokuMockStore.mettreAJourStatutMissionLivreur(id, 'REFUSEE');
+  const declinerMission = async (id: string) => {
+    if (!offlineSyncManager.estEnLigne()) {
+      await offlineSyncManager.ajouterActionEnAttente('CHANGEMENT_STATUT_LIVRAISON', { id, statut: 'REFUSEE' });
+      setActionsEnAttente(await offlineSyncManager.listerActionsEnAttente());
+      setNotification(`Action enregistrée Hors Ligne. Refus #${id} sera synchronisé.`);
+      return;
+    }
+    await livraisonRepository.mettreAJourStatutMission(id, 'REFUSEE');
     setNotification(`Mission #${id} déclinée. Une autre mission vous sera proposée dès disponibilité.`);
   };
 
-  const terminerMission = (id: string) => {
-    sokuMockStore.mettreAJourStatutMissionLivreur(id, 'TERMINEE');
+  const terminerMission = async (id: string) => {
+    if (!offlineSyncManager.estEnLigne()) {
+      await offlineSyncManager.ajouterActionEnAttente('CHANGEMENT_STATUT_LIVRAISON', { id, statut: 'TERMINEE' });
+      setActionsEnAttente(await offlineSyncManager.listerActionsEnAttente());
+      setNotification(`Action enregistrée Hors Ligne. Finalisation #${id} sera synchronisée.`);
+      return;
+    }
+    await livraisonRepository.mettreAJourStatutMission(id, 'TERMINEE');
     setNotification(`Mission #${id} validée et terminée ! Les fonds sont débloqués.`);
+  };
+
+  const forcerSynchronisation = async () => {
+    const res = await offlineSyncManager.synchroniserActions();
+    setActionsEnAttente(await offlineSyncManager.listerActionsEnAttente());
+    setNotification(`Re-synchronisation terminée : ${res.succes} action(s) synchronisée(s).`);
   };
 
   return (
@@ -137,6 +167,22 @@ export default function LivreurPage() {
         {/* Global Notification Banner */}
         {notification && (
           <SuccessBanner title="Notification Livreur" message={notification} onClose={() => setNotification(null)} />
+        )}
+
+        {/* Offline Sync Banner for Drivers */}
+        {actionsEnAttente.filter(a => a.statut === 'EN_ATTENTE').length > 0 && (
+          <div className="bg-amber-100 border border-amber-300 p-3 rounded-2xl flex items-center justify-between text-xs text-amber-950">
+            <div>
+              <span className="font-extrabold">File d&apos;attente Hors-Ligne SOKU :</span>{' '}
+              {actionsEnAttente.filter(a => a.statut === 'EN_ATTENTE').length} action(s) de livraison enregistrée(s) localement.
+            </div>
+            <button
+              onClick={forcerSynchronisation}
+              className="bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold px-3 py-1.5 rounded-xl text-[11px] shadow-xs shrink-0"
+            >
+              Re-synchroniser
+            </button>
+          </div>
         )}
 
         {/* Driver Earnings Summary Card */}

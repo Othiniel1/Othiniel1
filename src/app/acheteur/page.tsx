@@ -4,8 +4,10 @@ import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { sokuMockStore, CommandeGlobaleSOKU } from '@/lib/mock-store';
 import { MOCK_POINT_SOKU, MockProduit, MockPointSOKU } from '@/lib/mock-data';
+import { authService, produitRepository, commandeRepository } from '@/lib/services';
 import { contratMoteurAcheteur } from '@/lib/algorithmes/acheteur';
 import { PointSokuModal } from '@/components/ui/point-soku-modal';
+import { ChatDrawer } from '@/components/ui/chat-drawer';
 import { ContactModal } from '@/components/ui/contact-modal';
 import { FeedbackModal } from '@/components/ui/feedback-modal';
 import { DisputeModal } from '@/components/ui/dispute-modal';
@@ -52,6 +54,9 @@ export default function AcheteurPage() {
   const [modalLitigeCmdId, setModalLitigeCmdId] = useState<string | null>(null);
   const [modalConfirmReset, setModalConfirmReset] = useState(false);
 
+  // Chat Drawer State
+  const [chatCommandeId, setChatCommandeId] = useState<string | null>(null);
+
   // Feedback Notification & Error States
   const [notificationSucces, setNotificationSucces] = useState<string | null>(null);
   const [erreurGlobal, setErreurGlobal] = useState<string | null>(null);
@@ -60,8 +65,9 @@ export default function AcheteurPage() {
   const [recommandationProximite, setRecommandationProximite] = useState<{ constat: string; explication: string; recommandation: string } | null>(null);
 
   useEffect(() => {
-    setProduits(sokuMockStore.getProduits());
-    setCommandes(sokuMockStore.getCommandesGlobales());
+    authService.connexion('ACHETEUR');
+    produitRepository.listerProduits().then(setProduits);
+    commandeRepository.listerCommandesGlobales().then(setCommandes);
 
     contratMoteurAcheteur.analyser('acheteur_001', {
       categoriesPreferees: ['Alimentation', 'Épicerie'],
@@ -129,12 +135,19 @@ export default function AcheteurPage() {
     setPanier((prev) => prev.filter((item) => item.produit.id !== id));
   };
 
-  const validerCommande = () => {
+  const validerCommande = async () => {
     if (panier.length === 0) return;
     const frais = modeLivraison === 'livreur_soku' ? 1000 : modeLivraison === 'vendeur_lui_meme' ? 800 : 0;
 
     try {
-      sokuMockStore.creerCommandeGlobale('Kouassi Jean', '+2250707010203', panier, modeLivraison, frais);
+      const currentUser = await authService.getUtilisateurCourant();
+      await commandeRepository.creerCommandeGlobale(
+        currentUser?.nom || 'Kouassi Jean',
+        currentUser?.telephone || '+2250707010203',
+        panier,
+        modeLivraison,
+        frais
+      );
       setPanier([]);
       setNotificationSucces('Votre commande globale multi-vendeurs a été créée avec succès !');
       setOngletActif('commandes');
@@ -143,17 +156,17 @@ export default function AcheteurPage() {
     }
   };
 
-  const confirmerReception = (cmdId: string, note?: number, commentaire?: string) => {
+  const confirmerReception = async (cmdId: string, note?: number, commentaire?: string) => {
     try {
-      sokuMockStore.confirmerReceptionAcheteur(cmdId, note, commentaire);
+      await commandeRepository.confirmerReceptionAcheteur(cmdId, note, commentaire);
       setNotificationSucces(`Livraison #${cmdId} confirmée. Les fonds ont été libérés au vendeur.`);
     } catch (e: unknown) {
       setErreurGlobal((e as Error).message || 'Erreur lors de la confirmation de réception.');
     }
   };
 
-  const ouvrirLitige = (cmdId: string, motif: string, description: string) => {
-    sokuMockStore.ouvrirLitigeAcheteur(cmdId, motif, description);
+  const ouvrirLitige = async (cmdId: string, motif: string, description: string) => {
+    await commandeRepository.ouvrirLitigeAcheteur(cmdId, motif, description);
     setNotificationSucces(`Litige ouvert pour la commande #${cmdId}. Le déblocage des fonds est gelé.`);
   };
 
@@ -579,23 +592,32 @@ export default function AcheteurPage() {
                       <div className="pt-2 border-t border-slate-200 flex justify-between items-center flex-wrap gap-2">
                         <span className="font-extrabold text-slate-900">Total: {cmd.montantTotalGlobal.toLocaleString()} FCFA</span>
 
-                        {cmd.statutGlobal !== 'EN_LITIGE' && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setModalLitigeCmdId(cmd.id)}
-                              className="bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 text-[11px]"
-                            >
-                              <AlertTriangle className="w-3.5 h-3.5" /> Déclarer Litige
-                            </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setChatCommandeId(cmd.id)}
+                            className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 text-[11px]"
+                          >
+                            💬 Contacter Vendeur/Livreur
+                          </button>
 
-                            <button
-                              onClick={() => setModalFeedbackCmdId(cmd.id)}
-                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 text-[11px] shadow-xs"
-                            >
-                              <CheckCircle className="w-3.5 h-3.5" /> Confirmer Réception
-                            </button>
-                          </div>
-                        )}
+                          {cmd.statutGlobal !== 'EN_LITIGE' && (
+                            <>
+                              <button
+                                onClick={() => setModalLitigeCmdId(cmd.id)}
+                                className="bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 text-[11px]"
+                              >
+                                <AlertTriangle className="w-3.5 h-3.5" /> Déclarer Litige
+                              </button>
+
+                              <button
+                                onClick={() => setModalFeedbackCmdId(cmd.id)}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 text-[11px] shadow-xs"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" /> Confirmer Réception
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -770,6 +792,18 @@ export default function AcheteurPage() {
           destinataireRole={modalContactData.role}
           destinataireTelephone={modalContactData.tel}
           commandeId={modalContactData.cmdId}
+        />
+      )}
+
+      {/* Chat Drawer */}
+      {chatCommandeId && (
+        <ChatDrawer
+          isOpen={!!chatCommandeId}
+          onClose={() => setChatCommandeId(null)}
+          commandeId={chatCommandeId}
+          utilisateurCourant={{ id: 'acheteur_001', nom: 'Kouassi Jean', role: 'ACHETEUR' }}
+          destinataireId="vendeur_001"
+          destinataireNom="Vendeur Délices de Cocody"
         />
       )}
     </div>
