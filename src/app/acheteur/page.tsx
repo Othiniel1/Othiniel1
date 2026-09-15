@@ -8,6 +8,7 @@ import { contratMoteurAcheteur } from '@/lib/algorithmes/acheteur';
 import { PointSokuModal } from '@/components/ui/point-soku-modal';
 import { ContactModal } from '@/components/ui/contact-modal';
 import { FeedbackModal } from '@/components/ui/feedback-modal';
+import { DisputeModal } from '@/components/ui/dispute-modal';
 import { EmptyState, SuccessBanner } from '@/components/ui/state-cards';
 import {
   ShoppingBag,
@@ -26,6 +27,8 @@ import {
   Sparkles,
   History,
   RotateCcw,
+  AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react';
 
 export default function AcheteurPage() {
@@ -46,6 +49,8 @@ export default function AcheteurPage() {
   // Modal States
   const [modalContactData, setModalContactData] = useState<{ nom: string; role: 'LIVREUR' | 'CLIENT'; tel: string; cmdId: string } | null>(null);
   const [modalFeedbackCmdId, setModalFeedbackCmdId] = useState<string | null>(null);
+  const [modalLitigeCmdId, setModalLitigeCmdId] = useState<string | null>(null);
+  const [modalConfirmReset, setModalConfirmReset] = useState(false);
 
   // Feedback Notification & Error States
   const [notificationSucces, setNotificationSucces] = useState<string | null>(null);
@@ -139,8 +144,17 @@ export default function AcheteurPage() {
   };
 
   const confirmerReception = (cmdId: string, note?: number, commentaire?: string) => {
-    sokuMockStore.confirmerReceptionAcheteur(cmdId, note, commentaire);
-    setNotificationSucces(`Livraison #${cmdId} confirmée. Les fonds ont été libérés au vendeur.`);
+    try {
+      sokuMockStore.confirmerReceptionAcheteur(cmdId, note, commentaire);
+      setNotificationSucces(`Livraison #${cmdId} confirmée. Les fonds ont été libérés au vendeur.`);
+    } catch (e: unknown) {
+      setErreurGlobal((e as Error).message || 'Erreur lors de la confirmation de réception.');
+    }
+  };
+
+  const ouvrirLitige = (cmdId: string, motif: string, description: string) => {
+    sokuMockStore.ouvrirLitigeAcheteur(cmdId, motif, description);
+    setNotificationSucces(`Litige ouvert pour la commande #${cmdId}. Le déblocage des fonds est gelé.`);
   };
 
   // Filtered lists for active tracking vs archived history
@@ -194,7 +208,7 @@ export default function AcheteurPage() {
           </div>
 
           <button
-            onClick={() => sokuMockStore.reinitialiserMockStore()}
+            onClick={() => setModalConfirmReset(true)}
             className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0"
             title="Réinitialiser l'état prototype"
           >
@@ -527,7 +541,9 @@ export default function AcheteurPage() {
                           <span className="font-extrabold text-slate-900 text-sm">Commande #{cmd.id}</span>
                           <span className="text-[10px] text-slate-500 block font-mono">{cmd.dateCreation}</span>
                         </div>
-                        <span className="bg-amber-100 text-amber-900 px-2.5 py-1 rounded-lg font-bold text-[11px] uppercase">
+                        <span className={`px-2.5 py-1 rounded-lg font-bold text-[11px] uppercase ${
+                          cmd.statutGlobal === 'EN_LITIGE' ? 'bg-rose-100 text-rose-900' : 'bg-amber-100 text-amber-900'
+                        }`}>
                           {cmd.statutGlobal.replace(/_/g, ' ')}
                         </span>
                       </div>
@@ -550,14 +566,36 @@ export default function AcheteurPage() {
                         ))}
                       </div>
 
-                      <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
+                      {cmd.statutGlobal === 'EN_LITIGE' && cmd.litigeDetails && (
+                        <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl space-y-1 text-rose-950">
+                          <p className="font-bold flex items-center gap-1">
+                            <ShieldAlert className="w-4 h-4 text-rose-600" /> Litige Ouvert : {cmd.litigeDetails.motif}
+                          </p>
+                          <p className="text-[11px] text-rose-900">&quot;{cmd.litigeDetails.description}&quot;</p>
+                          <p className="text-[10px] text-rose-700 italic">Déblocage des fonds temporairement gelé.</p>
+                        </div>
+                      )}
+
+                      <div className="pt-2 border-t border-slate-200 flex justify-between items-center flex-wrap gap-2">
                         <span className="font-extrabold text-slate-900">Total: {cmd.montantTotalGlobal.toLocaleString()} FCFA</span>
-                        <button
-                          onClick={() => setModalFeedbackCmdId(cmd.id)}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 text-[11px] shadow-xs"
-                        >
-                          <CheckCircle className="w-3.5 h-3.5" /> Confirmer Réception
-                        </button>
+
+                        {cmd.statutGlobal !== 'EN_LITIGE' && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setModalLitigeCmdId(cmd.id)}
+                              className="bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 text-[11px]"
+                            >
+                              <AlertTriangle className="w-3.5 h-3.5" /> Déclarer Litige
+                            </button>
+
+                            <button
+                              onClick={() => setModalFeedbackCmdId(cmd.id)}
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 text-[11px] shadow-xs"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" /> Confirmer Réception
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -668,6 +706,16 @@ export default function AcheteurPage() {
         </div>
       )}
 
+      {/* Dispute Modal */}
+      {modalLitigeCmdId && (
+        <DisputeModal
+          isOpen={!!modalLitigeCmdId}
+          onClose={() => setModalLitigeCmdId(null)}
+          commandeId={modalLitigeCmdId}
+          onConfirmDispute={(motif, desc) => ouvrirLitige(modalLitigeCmdId, motif, desc)}
+        />
+      )}
+
       {/* Confirmation & Feedback Modal */}
       {modalFeedbackCmdId && (
         <FeedbackModal
@@ -676,6 +724,33 @@ export default function AcheteurPage() {
           commandeId={modalFeedbackCmdId}
           onConfirm={(note, com) => confirmerReception(modalFeedbackCmdId, note, com)}
         />
+      )}
+
+      {/* Reset Confirmation Modal */}
+      {modalConfirmReset && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 space-y-3 shadow-xl border border-slate-200 text-xs">
+            <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+              <RotateCcw className="w-4 h-4 text-amber-500" /> Confirmer la réinitialisation
+            </h3>
+            <p className="text-slate-600">
+              Voulez-vous réinitialiser l&apos;état du prototype SOKU ? Toutes les commandes créées et modifications de stock seront effacées.
+            </p>
+            <div className="flex gap-2 justify-end pt-2">
+              <button onClick={() => setModalConfirmReset(false)} className="px-3 py-1.5 bg-slate-100 font-bold rounded-lg text-slate-700">Annuler</button>
+              <button
+                onClick={() => {
+                  sokuMockStore.reinitialiserMockStore();
+                  setModalConfirmReset(false);
+                  setNotificationSucces('État du prototype réinitialisé avec succès.');
+                }}
+                className="px-3 py-1.5 bg-amber-500 font-bold rounded-lg text-slate-950 shadow-xs"
+              >
+                Réinitialiser
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Point SOKU Modal */}

@@ -19,11 +19,13 @@ import {
   RotateCcw,
   History,
   DollarSign,
+  Power,
 } from 'lucide-react';
 
 export default function LivreurPage() {
   const [missions, setMissions] = useState<MockMissionLivreur[]>([]);
   const [ongletActif, setOngletActif] = useState<'missions' | 'historique'>('missions');
+  const [estDisponible, setEstDisponible] = useState<boolean>(true);
   const [notification, setNotification] = useState<string | null>(null);
 
   // Contact Modal State
@@ -34,7 +36,7 @@ export default function LivreurPage() {
     cmdId: string;
   } | null>(null);
 
-  // Background Insight Performance Card (Native UX Feature)
+  // Background Insight Performance Card
   const [rendementTemps, setRendementTemps] = useState<{
     constat: string;
     explication: string;
@@ -46,7 +48,7 @@ export default function LivreurPage() {
 
     contratMoteurLivreur.analyser('livreur_001', {
       zoneActuelle: 'Cocody Vallon',
-      estDisponible: true,
+      estDisponible,
     }).then((res) => {
       setRendementTemps({
         constat: res.constat,
@@ -61,7 +63,7 @@ export default function LivreurPage() {
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [estDisponible]);
 
   const missionsEnCoursOuProposees = useMemo(() => {
     return missions.filter((m) => m.statut !== 'TERMINEE' && m.statut !== 'REFUSEE');
@@ -107,13 +109,29 @@ export default function LivreurPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => sokuMockStore.reinitialiserMockStore()}
-            className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0"
-            title="Réinitialiser l'état prototype"
-          >
-            <RotateCcw className="w-3.5 h-3.5" /> Réinitialiser Démo
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Online / Offline Switch */}
+            <button
+              onClick={() => {
+                const nextState = !estDisponible;
+                setEstDisponible(nextState);
+                setNotification(nextState ? 'Vous êtes maintenant EN LIGNE (Missions actives)' : 'Vous êtes maintenant HORS LIGNE');
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                estDisponible ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              <Power className="w-3.5 h-3.5" /> {estDisponible ? 'En Ligne' : 'Hors Ligne'}
+            </button>
+
+            <button
+              onClick={() => sokuMockStore.reinitialiserMockStore()}
+              className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0"
+              title="Réinitialiser l'état prototype"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Réinitialiser Démo
+            </button>
+          </div>
         </div>
 
         {/* Global Notification Banner */}
@@ -176,85 +194,102 @@ export default function LivreurPage() {
               </p>
             </div>
 
-            {/* Missions List */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 text-xs">
-              <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                <Truck className="w-5 h-5 text-amber-500" />
-                Missions Proposées & En Cours ({missionsEnCoursOuProposees.length})
-              </h2>
+            {/* Offline Status Warning */}
+            {!estDisponible ? (
+              <div className="bg-amber-50 border border-amber-300 p-5 rounded-2xl text-center space-y-2 text-xs text-amber-950">
+                <Power className="w-8 h-8 text-amber-600 mx-auto" />
+                <p className="font-extrabold text-sm">Vous êtes actuellement Hors Ligne</p>
+                <p className="text-slate-600 max-w-md mx-auto">
+                  Passez votre statut en &quot;En Ligne&quot; en haut à droite pour recevoir les nouvelles propositions de missions de livraison en temps réel.
+                </p>
+                <button
+                  onClick={() => { setEstDisponible(true); setNotification('Vous êtes maintenant EN LIGNE'); }}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl mt-2 shadow-xs"
+                >
+                  Passer En Ligne
+                </button>
+              </div>
+            ) : (
+              /* Missions List */
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 text-xs">
+                <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-amber-500" />
+                  Missions Proposées & En Cours ({missionsEnCoursOuProposees.length})
+                </h2>
 
-              {missionsEnCoursOuProposees.length === 0 ? (
-                <EmptyState
-                  title="Aucune mission active"
-                  description="Les nouvelles demandes de livraison prêtes s'afficheront ici automatiquement."
-                  icon={Truck}
-                />
-              ) : (
-                <div className="space-y-4">
-                  {missionsEnCoursOuProposees.map((miss) => (
-                    <div key={miss.id} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3.5">
-                      <div className="flex justify-between items-center border-b border-slate-200 pb-2.5">
-                        <div>
-                          <span className="font-extrabold text-slate-900 text-sm">Mission #{miss.id}</span>
-                          <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold uppercase ml-2">
-                            Type : {miss.typeMission}
+                {missionsEnCoursOuProposees.length === 0 ? (
+                  <EmptyState
+                    title="Aucune mission active"
+                    description="Les nouvelles demandes de livraison prêtes s'afficheront ici automatiquement."
+                    icon={Truck}
+                  />
+                ) : (
+                  <div className="space-y-4">
+                    {missionsEnCoursOuProposees.map((miss) => (
+                      <div key={miss.id} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3.5">
+                        <div className="flex justify-between items-center border-b border-slate-200 pb-2.5">
+                          <div>
+                            <span className="font-extrabold text-slate-900 text-sm">Mission #{miss.id}</span>
+                            <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold uppercase ml-2">
+                              Type : {miss.typeMission}
+                            </span>
+                          </div>
+                          <span className="text-sm font-black text-amber-600">
+                            {miss.remunerationProposeeFCFA.toLocaleString()} FCFA
                           </span>
                         </div>
-                        <span className="text-sm font-black text-amber-600">
-                          {miss.remunerationProposeeFCFA.toLocaleString()} FCFA
-                        </span>
-                      </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">Point de Collecte :</p>
-                          <p className="font-bold text-slate-900 flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-amber-600" /> {miss.pointRetraitNom}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Point de Collecte :</p>
+                            <p className="font-bold text-slate-900 flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-amber-600" /> {miss.pointRetraitNom}</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Point SOKU Livraison :</p>
+                            <p className="font-bold text-slate-900 flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-amber-600" /> {miss.pointLivraisonNom}</p>
+                          </div>
                         </div>
-                        <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">Point SOKU Livraison :</p>
-                          <p className="font-bold text-slate-900 flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-amber-600" /> {miss.pointLivraisonNom}</p>
+
+                        <div className="flex items-center justify-between text-[11px] text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200">
+                          <span>Distance estimée : <strong>{miss.distanceKm} km</strong></span>
+                          <span>Statut mission : <strong className="uppercase text-amber-800">{miss.statut}</strong></span>
                         </div>
-                      </div>
 
-                      <div className="flex items-center justify-between text-[11px] text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200">
-                        <span>Distance estimée : <strong>{miss.distanceKm} km</strong></span>
-                        <span>Statut mission : <strong className="uppercase text-amber-800">{miss.statut}</strong></span>
-                      </div>
-
-                      <div className="pt-2 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2">
-                        {miss.clientTelephone && (
-                          <button
-                            onClick={() => setModalContactData({ nom: 'Acheteur SOKU', role: 'CLIENT', tel: miss.clientTelephone!, cmdId: miss.commandeId })}
-                            className="bg-slate-200 hover:bg-slate-300 text-slate-800 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 text-[11px]"
-                          >
-                            <Phone className="w-3.5 h-3.5" /> Appeler Acheteur
-                          </button>
-                        )}
-
-                        <div className="flex gap-2 ml-auto">
-                          {miss.statut === 'PROPOSEE' && (
-                            <>
-                              <button onClick={() => declinerMission(miss.id)} className="bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold px-3 py-1.5 rounded-xl flex items-center gap-1">
-                                <XCircle className="w-3.5 h-3.5" /> Décliner
-                              </button>
-                              <button onClick={() => accepterMission(miss.id)} className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-1.5 rounded-xl flex items-center gap-1 shadow-xs">
-                                <CheckCircle className="w-3.5 h-3.5 text-amber-400" /> Accepter
-                              </button>
-                            </>
-                          )}
-
-                          {miss.statut === 'EN_COURS' && (
-                            <button onClick={() => terminerMission(miss.id)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm">
-                              <CheckCircle className="w-4 h-4" /> Valider Livraison Effectuée
+                        <div className="pt-2 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2">
+                          {miss.clientTelephone && (
+                            <button
+                              onClick={() => setModalContactData({ nom: 'Acheteur SOKU', role: 'CLIENT', tel: miss.clientTelephone!, cmdId: miss.commandeId })}
+                              className="bg-slate-200 hover:bg-slate-300 text-slate-800 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 text-[11px]"
+                            >
+                              <Phone className="w-3.5 h-3.5" /> Appeler Acheteur
                             </button>
                           )}
+
+                          <div className="flex gap-2 ml-auto">
+                            {miss.statut === 'PROPOSEE' && (
+                              <>
+                                <button onClick={() => declinerMission(miss.id)} className="bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold px-3 py-1.5 rounded-xl flex items-center gap-1">
+                                  <XCircle className="w-3.5 h-3.5" /> Décliner
+                                </button>
+                                <button onClick={() => accepterMission(miss.id)} className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-1.5 rounded-xl flex items-center gap-1 shadow-xs">
+                                  <CheckCircle className="w-3.5 h-3.5 text-amber-400" /> Accepter
+                                </button>
+                              </>
+                            )}
+
+                            {miss.statut === 'EN_COURS' && (
+                              <button onClick={() => terminerMission(miss.id)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm">
+                                <CheckCircle className="w-4 h-4" /> Valider Livraison Effectuée
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

@@ -11,6 +11,7 @@ export type StatutCommandeGlobale =
   | 'EN_COURS_DE_COLLECTE'
   | 'EN_LIVRAISON'
   | 'LIVREE'
+  | 'EN_LITIGE'
   | 'ANNULEE';
 
 export interface SousCommandeVendeur {
@@ -18,7 +19,7 @@ export interface SousCommandeVendeur {
   vendeurId: string;
   boutiqueNom: string;
   articles: { produit: MockProduit; quantite: number; prixUnitaire: number }[];
-  statut: 'EN_ATTENTE' | 'EN_PREPARATION' | 'PRETE' | 'REMISE_AU_LIVREUR' | 'LIVREE' | 'ANNULEE';
+  statut: 'EN_ATTENTE' | 'EN_PREPARATION' | 'PRETE' | 'REMISE_AU_LIVREUR' | 'LIVREE' | 'EN_LITIGE' | 'ANNULEE';
   montantSousTotal: number;
   motifAnnulation?: string;
 }
@@ -42,6 +43,11 @@ export interface CommandeGlobaleSOKU {
     date: string;
     noteProduit?: number;
     commentaire?: string;
+  };
+  litigeDetails?: {
+    date: string;
+    motif: string;
+    description: string;
   };
 }
 
@@ -264,14 +270,33 @@ class SOKUMockStore {
     return nouvelleCommande;
   }
 
+  public ouvrirLitigeAcheteur(commandeId: string, motif: string, description: string) {
+    this.commandesGlobales = this.commandesGlobales.map((cmd) => {
+      if (cmd.id !== commandeId) return cmd;
+
+      return {
+        ...cmd,
+        statutGlobal: 'EN_LITIGE' as const,
+        sousCommandes: cmd.sousCommandes.map((s) => ({ ...s, statut: 'EN_LITIGE' as const })),
+        litigeDetails: {
+          date: new Date().toISOString(),
+          motif,
+          description,
+        },
+      };
+    });
+
+    this.notify();
+  }
+
   public annulerSousCommande(commandeId: string, sousCommandeId: string, motif: string) {
     this.commandesGlobales = this.commandesGlobales.map((cmd) => {
       if (cmd.id !== commandeId) return cmd;
 
-      let montantARembourser = 0;
+      let montantSubARembourser = 0;
       const nouvellesSousCommandes = cmd.sousCommandes.map((sub) => {
         if (sub.id !== sousCommandeId) return sub;
-        montantARembourser = sub.montantSousTotal;
+        montantSubARembourser = sub.montantSousTotal;
         return { ...sub, statut: 'ANNULEE' as const, motifAnnulation: motif };
       });
 
@@ -288,13 +313,17 @@ class SOKUMockStore {
         });
       }
 
-      // Check global status
+      // Check if all sub-orders are now cancelled
       const toutesAnnulees = nouvellesSousCommandes.every((s) => s.statut === 'ANNULEE');
       const statutGlobal = toutesAnnulees ? ('ANNULEE' as const) : cmd.statutGlobal;
 
-      // Execute simulated payment refund via unique API abstraction
-      if (montantARembourser > 0) {
-        apiUniquePaiement.rembourser(`pay_${cmd.id}`, montantARembourser, motif);
+      // If all sub-orders are cancelled, refund sub-order total + delivery fees
+      const totalARembourser = toutesAnnulees
+        ? montantSubARembourser + cmd.fraisLivraison
+        : montantSubARembourser;
+
+      if (totalARembourser > 0) {
+        apiUniquePaiement.rembourser(`pay_${cmd.id}`, totalARembourser, motif);
       }
 
       return {
@@ -311,20 +340,25 @@ class SOKUMockStore {
     this.commandesGlobales = this.commandesGlobales.map((cmd) => {
       if (cmd.id !== commandeId) return cmd;
 
+      // Check if order is in dispute
+      const estEnLitige = cmd.statutGlobal === 'EN_LITIGE';
+
       // Validate release through Orchestrator rules
       const validation = orchestrateur.validerAutorisationDeblocage({
         statutCommande: 'livree',
         preuveValide: true,
-        estEnLitige: false,
+        estEnLitige,
       });
 
-      if (validation.autorise) {
-        apiUniquePaiement.validerPreuvesEtDebloquer({
-          commandeId: cmd.id,
-          referenceTransaction: `pay_${cmd.id}`,
-          preuveValide: true,
-        });
+      if (!validation.autorise) {
+        throw new Error(`Déblocage refusé par l'Orchestrateur: ${validation.motif}`);
       }
+
+      apiUniquePaiement.validerPreuvesEtDebloquer({
+        commandeId: cmd.id,
+        referenceTransaction: `pay_${cmd.id}`,
+        preuveValide: true,
+      });
 
       return {
         ...cmd,
