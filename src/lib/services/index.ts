@@ -5,6 +5,8 @@ import {
   IProduitRepository,
   ICommandeRepository,
   ILivraisonRepository,
+  IStockageMediaService,
+  PreuveLivraison,
   ProfilUtilisateur,
 } from './interfaces';
 
@@ -120,7 +122,24 @@ class InMemoryCommandeRepository implements ICommandeRepository {
   }
 }
 
+class InMemoryStockageMediaService implements IStockageMediaService {
+  private medias: Map<string, { url: string; contenuBase64: string }> = new Map();
+
+  async stockerMedia(fichierNom: string, contenuBase64: string): Promise<{ url: string; mediaId: string }> {
+    const mediaId = `media_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const url = `data:image/png;base64,${contenuBase64 || 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='}`;
+    this.medias.set(mediaId, { url, contenuBase64 });
+    return { url, mediaId };
+  }
+
+  async supprimerMedia(mediaId: string): Promise<void> {
+    this.medias.delete(mediaId);
+  }
+}
+
 class InMemoryLivraisonRepository implements ILivraisonRepository {
+  private preuves: Map<string, PreuveLivraison> = new Map();
+
   async listerMissions(): Promise<MockMissionLivreur[]> {
     return sokuMockStore.getMissionsLivreur();
   }
@@ -128,9 +147,30 @@ class InMemoryLivraisonRepository implements ILivraisonRepository {
   async mettreAJourStatutMission(missionId: string, statut: MockMissionLivreur['statut']): Promise<void> {
     sokuMockStore.mettreAJourStatutMissionLivreur(missionId, statut);
   }
+
+  async enregistrerPreuveLivraison(preuve: Omit<PreuveLivraison, 'id' | 'horodatage' | 'estValide'>): Promise<PreuveLivraison> {
+    if (!preuve.valeurPreuve || !preuve.valeurPreuve.trim()) {
+      throw new Error('La valeur de la preuve de livraison est obligatoire');
+    }
+
+    const nouvellePreuve: PreuveLivraison = {
+      ...preuve,
+      id: `prv_${Date.now()}`,
+      horodatage: new Date().toISOString(),
+      estValide: true,
+    };
+
+    this.preuves.set(preuve.commandeId, nouvellePreuve);
+    return nouvellePreuve;
+  }
+
+  async obtenirPreuveLivraison(commandeId: string): Promise<PreuveLivraison | null> {
+    return this.preuves.get(commandeId) || null;
+  }
 }
 
 export const authService = new InMemoryAuthService();
 export const produitRepository = new InMemoryProduitRepository();
 export const commandeRepository = new InMemoryCommandeRepository();
 export const livraisonRepository = new InMemoryLivraisonRepository();
+export const stockageMediaService = new InMemoryStockageMediaService();

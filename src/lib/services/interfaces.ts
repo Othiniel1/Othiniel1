@@ -39,7 +39,24 @@ export interface ICommandeRepository {
   trancherLitigeAdmin(commandeId: string, decision: 'REMBOURSER_ACHETEUR' | 'DEBLOQUER_VENDEUR', motifAdmin: string): Promise<void>;
 }
 
+export interface PreuveLivraison {
+  id: string;
+  commandeId: string;
+  livreurId: string;
+  typePreuve: 'CODE_OTP' | 'SIGNATURE' | 'PHOTO';
+  valeurPreuve: string;
+  horodatage: string;
+  estValide: boolean;
+}
+
+export interface IStockageMediaService {
+  stockerMedia(fichierNom: string, contenuBase64: string): Promise<{ url: string; mediaId: string }>;
+  supprimerMedia(mediaId: string): Promise<void>;
+}
+
 export interface ILivraisonRepository {
   listerMissions(): Promise<MockMissionLivreur[]>;
   mettreAJourStatutMission(missionId: string, statut: MockMissionLivreur['statut']): Promise<void>;
+  enregistrerPreuveLivraison(preuve: Omit<PreuveLivraison, 'id' | 'horodatage' | 'estValide'>): Promise<PreuveLivraison>;
+  obtenirPreuveLivraison(commandeId: string): Promise<PreuveLivraison | null>;
 }

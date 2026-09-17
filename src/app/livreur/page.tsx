@@ -40,6 +40,11 @@ export default function LivreurPage() {
     cmdId: string;
   } | null>(null);
 
+  // Proof Modal State
+  const [modalPreuveCmdId, setModalPreuveCmdId] = useState<string | null>(null);
+  const [typePreuve, setTypePreuve] = useState<'CODE_OTP' | 'SIGNATURE' | 'PHOTO'>('CODE_OTP');
+  const [valeurPreuveInput, setValeurPreuveInput] = useState('');
+
   // Background Insight Performance Card
   const [rendementTemps, setRendementTemps] = useState<{
     constat: string;
@@ -324,8 +329,8 @@ export default function LivreurPage() {
                             )}
 
                             {miss.statut === 'EN_COURS' && (
-                              <button onClick={() => terminerMission(miss.id)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm">
-                                <CheckCircle className="w-4 h-4" /> Valider Livraison Effectuée
+                              <button onClick={() => setModalPreuveCmdId(miss.commandeId)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm">
+                                <CheckCircle className="w-4 h-4" /> Enregistrer Preuve & Valider
                               </button>
                             )}
                           </div>
@@ -415,6 +420,80 @@ export default function LivreurPage() {
           destinataireTelephone={modalContactData.tel}
           commandeId={modalContactData.cmdId}
         />
+      )}
+
+      {/* Proof Modal */}
+      {modalPreuveCmdId && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 text-xs">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 space-y-3 shadow-xl border border-slate-200">
+            <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-2 border-b border-slate-100 pb-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" /> Preuve de Livraison SOKU
+            </h3>
+
+            <div className="space-y-2">
+              <label className="block font-bold text-slate-700">Type de preuve :</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(['CODE_OTP', 'SIGNATURE', 'PHOTO'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTypePreuve(t)}
+                    className={`py-1.5 px-2 rounded-lg font-extrabold text-[10px] border ${
+                      typePreuve === t ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    {t.replace('_', ' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">
+                {typePreuve === 'CODE_OTP' && 'Code OTP à 4 chiffres fourni par l’acheteur :'}
+                {typePreuve === 'SIGNATURE' && 'Nom du destinataire & Signature numérique :'}
+                {typePreuve === 'PHOTO' && 'Référence du cliché photo devant le Point SOKU :'}
+              </label>
+              <input
+                type="text"
+                required
+                placeholder={typePreuve === 'CODE_OTP' ? 'ex: 4821' : 'ex: Reçu par Awa Diallo'}
+                value={valeurPreuveInput}
+                onChange={(e) => setValeurPreuveInput(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
+              <button onClick={() => setModalPreuveCmdId(null)} className="px-3 py-1.5 bg-slate-100 text-slate-700 font-bold rounded-xl">
+                Annuler
+              </button>
+              <button
+                onClick={async () => {
+                  if (!valeurPreuveInput.trim()) return;
+                  const targetMiss = missions.find((m) => m.commandeId === modalPreuveCmdId);
+                  if (targetMiss) {
+                    await livraisonRepository.enregistrerPreuveLivraison({
+                      commandeId: modalPreuveCmdId,
+                      livreurId: 'livreur_001',
+                      typePreuve,
+                      valeurPreuve: valeurPreuveInput,
+                    });
+                    await terminerMission(targetMiss.id);
+                  }
+                  setModalPreuveCmdId(null);
+                  setValeurPreuveInput('');
+                }}
+                disabled={!valeurPreuveInput.trim()}
+                className={`px-3 py-1.5 font-bold rounded-xl shadow-xs ${
+                  valeurPreuveInput.trim() ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                Valider Preuve & Terminer
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
