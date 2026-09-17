@@ -181,9 +181,69 @@ class InMemoryNotificationService implements INotificationService {
   }
 }
 
+class IndexedDBOfflineStorage {
+  private dbName = 'soku_offline_db';
+  private storeName = 'actions_queue';
+
+  private async openDB(): Promise<IDBDatabase | null> {
+    if (typeof window === 'undefined' || !window.indexedDB) return null;
+    return new Promise((resolve) => {
+      const request = indexedDB.open(this.dbName, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName, { keyPath: 'id' });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+    });
+  }
+
+  async sauvegarderActions(actions: ActionOfflineSOKU[]): Promise<void> {
+    const db = await this.openDB();
+    if (!db) return;
+    try {
+      const tx = db.transaction(this.storeName, 'readwrite');
+      const store = tx.objectStore(this.storeName);
+      store.clear();
+      actions.forEach((a) => store.put(a));
+    } catch {
+      // IndexedDB fallback silent error
+    }
+  }
+
+  async chargerActions(): Promise<ActionOfflineSOKU[] | null> {
+    const db = await this.openDB();
+    if (!db) return null;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(this.storeName, 'readonly');
+        const store = tx.objectStore(this.storeName);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result as ActionOfflineSOKU[]);
+        req.onerror = () => resolve(null);
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+}
+
 class OfflineSyncManager implements ISynchronisationOfflineService {
   private fileAttente: ActionOfflineSOKU[] = [];
   private simulateurEnLigne: boolean = true;
+  private persistence = new IndexedDBOfflineStorage();
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      this.persistence.chargerActions().then((actions) => {
+        if (actions && actions.length > 0) {
+          this.fileAttente = actions;
+        }
+      });
+    }
+  }
 
   public setModeSimuleEnLigne(enLigne: boolean) {
     this.simulateurEnLigne = enLigne;
@@ -218,6 +278,7 @@ class OfflineSyncManager implements ISynchronisationOfflineService {
     };
 
     this.fileAttente.push(action);
+    await this.persistence.sauvegarderActions(this.fileAttente);
     return action;
   }
 
@@ -258,6 +319,7 @@ class OfflineSyncManager implements ISynchronisationOfflineService {
       }
     }
 
+    await this.persistence.sauvegarderActions(this.fileAttente);
     return { succes, echecs };
   }
 }
