@@ -289,6 +289,44 @@ class SOKUMockStore {
     this.notify();
   }
 
+  public trancherLitigeAdmin(commandeId: string, decision: 'REMBOURSER_ACHETEUR' | 'DEBLOQUER_VENDEUR', motifAdmin: string) {
+    this.commandesGlobales = this.commandesGlobales.map((cmd) => {
+      if (cmd.id !== commandeId) return cmd;
+      if (cmd.statutGlobal !== 'EN_LITIGE') throw new Error('Seule une commande EN_LITIGE peut être tranchée par l’administration');
+
+      if (decision === 'REMBOURSER_ACHETEUR') {
+        cmd.sousCommandes.forEach((sub) => {
+          sub.articles.forEach(({ produit, quantite }) => {
+            this.produits = this.produits.map((p) => p.id === produit.id ? { ...p, stock: p.stock + quantite } : p);
+          });
+        });
+
+        apiUniquePaiement.rembourser(`pay_${cmd.id}`, cmd.montantTotalGlobal, motifAdmin);
+
+        return {
+          ...cmd,
+          statutGlobal: 'ANNULEE' as const,
+          sousCommandes: cmd.sousCommandes.map((s) => ({ ...s, statut: 'ANNULEE' as const, motifAnnulation: `Décision Admin: ${motifAdmin}` })),
+        };
+      } else {
+        apiUniquePaiement.validerPreuvesEtDebloquer({
+          commandeId: cmd.id,
+          referenceTransaction: `pay_${cmd.id}`,
+          preuveValide: true,
+        });
+
+        return {
+          ...cmd,
+          statutGlobal: 'LIVREE' as const,
+          sousCommandes: cmd.sousCommandes.map((s) => ({ ...s, statut: 'LIVREE' as const })),
+        };
+      }
+    });
+
+    busEvenements.publier('paiement:debloque', 'orchestrateur-admin', { commandeId, decision, motifAdmin });
+    this.notify();
+  }
+
   public annulerSousCommande(commandeId: string, sousCommandeId: string, motif: string) {
     this.commandesGlobales = this.commandesGlobales.map((cmd) => {
       if (cmd.id !== commandeId) return cmd;

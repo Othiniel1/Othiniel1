@@ -36,6 +36,7 @@ export interface ICommandeRepository {
   annulerSousCommande(commandeId: string, sousCommandeId: string, motif: string): Promise<void>;
   confirmerReceptionAcheteur(commandeId: string, note?: number, commentaire?: string): Promise<void>;
   ouvrirLitigeAcheteur(commandeId: string, motif: string, description: string): Promise<void>;
+  trancherLitigeAdmin(commandeId: string, decision: 'REMBOURSER_ACHETEUR' | 'DEBLOQUER_VENDEUR', motifAdmin: string): Promise<void>;
 }
 
 export interface ILivraisonRepository {

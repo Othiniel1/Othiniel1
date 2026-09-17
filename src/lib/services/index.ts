@@ -110,6 +110,14 @@ class InMemoryCommandeRepository implements ICommandeRepository {
   async ouvrirLitigeAcheteur(commandeId: string, motif: string, description: string): Promise<void> {
     sokuMockStore.ouvrirLitigeAcheteur(commandeId, motif, description);
   }
+
+  async trancherLitigeAdmin(commandeId: string, decision: 'REMBOURSER_ACHETEUR' | 'DEBLOQUER_VENDEUR', motifAdmin: string): Promise<void> {
+    const user = await authService.getUtilisateurCourant();
+    if (user?.role !== 'ADMIN') {
+      throw new Error('Accès refusé : Opération réservée exclusivement aux administrateurs SOKU');
+    }
+    sokuMockStore.trancherLitigeAdmin(commandeId, decision, motifAdmin);
+  }
 }
 
 class InMemoryLivraisonRepository implements ILivraisonRepository {
