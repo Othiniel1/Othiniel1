@@ -277,7 +277,11 @@ class SOKUMockStore {
       return {
         ...cmd,
         statutGlobal: 'EN_LITIGE' as const,
-        sousCommandes: cmd.sousCommandes.map((s) => ({ ...s, statut: 'EN_LITIGE' as const })),
+        sousCommandes: cmd.sousCommandes.map((s) => {
+          // Preserve already cancelled sub-orders
+          if (s.statut === 'ANNULEE') return s;
+          return { ...s, statut: 'EN_LITIGE' as const };
+        }),
         litigeDetails: {
           date: new Date().toISOString(),
           motif,
@@ -286,6 +290,7 @@ class SOKUMockStore {
       };
     });
 
+    busEvenements.publier('litige:ouvert', 'acheteur', { commandeId, motif, description });
     this.notify();
   }
 
@@ -295,10 +300,13 @@ class SOKUMockStore {
       if (cmd.statutGlobal !== 'EN_LITIGE') throw new Error('Seule une commande EN_LITIGE peut être tranchée par l’administration');
 
       if (decision === 'REMBOURSER_ACHETEUR') {
+        // Only restore stock for sub-orders that were actively in dispute and not previously cancelled
         cmd.sousCommandes.forEach((sub) => {
-          sub.articles.forEach(({ produit, quantite }) => {
-            this.produits = this.produits.map((p) => p.id === produit.id ? { ...p, stock: p.stock + quantite } : p);
-          });
+          if (sub.statut !== 'ANNULEE') {
+            sub.articles.forEach(({ produit, quantite }) => {
+              this.produits = this.produits.map((p) => p.id === produit.id ? { ...p, stock: p.stock + quantite } : p);
+            });
+          }
         });
 
         apiUniquePaiement.rembourser(`pay_${cmd.id}`, cmd.montantTotalGlobal, motifAdmin);
@@ -306,7 +314,10 @@ class SOKUMockStore {
         return {
           ...cmd,
           statutGlobal: 'ANNULEE' as const,
-          sousCommandes: cmd.sousCommandes.map((s) => ({ ...s, statut: 'ANNULEE' as const, motifAnnulation: `Décision Admin: ${motifAdmin}` })),
+          sousCommandes: cmd.sousCommandes.map((s) => {
+            if (s.statut === 'ANNULEE') return s;
+            return { ...s, statut: 'ANNULEE' as const, motifAnnulation: `Décision Admin: ${motifAdmin}` };
+          }),
         };
       } else {
         apiUniquePaiement.validerPreuvesEtDebloquer({
@@ -318,7 +329,10 @@ class SOKUMockStore {
         return {
           ...cmd,
           statutGlobal: 'LIVREE' as const,
-          sousCommandes: cmd.sousCommandes.map((s) => ({ ...s, statut: 'LIVREE' as const })),
+          sousCommandes: cmd.sousCommandes.map((s) => {
+            if (s.statut === 'ANNULEE') return s;
+            return { ...s, statut: 'LIVREE' as const };
+          }),
         };
       }
     });
